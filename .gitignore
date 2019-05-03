@@ -3,3 +3,31 @@
 ################################################################################
 
 /SWGOH Prereqs/bin/Debug/netcoreapp2.1/config.json
+*.targets
+/SWGOH Prereqs/obj/SWGOH Prereqs.csproj.nuget.g.props
+/SWGOH Prereqs/obj/project.assets.json
+/SWGOH Prereqs/obj/SWGOH Prereqs.csproj.nuget.cache
+/SWGOH Prereqs/obj/Debug/netcoreapp2.1/TemporaryGeneratedFile_E7A71F73-0F8D-4B9B-B56E-8E70B10BC5D3.cs
+/SWGOH Prereqs/obj/Debug/netcoreapp2.1/TemporaryGeneratedFile_5937a670-0e60-4077-877b-f7221da3dda1.cs
+/SWGOH Prereqs/obj/Debug/netcoreapp2.1/TemporaryGeneratedFile_036C0B5B-1481-4323-8D20-8F5ADCB23D92.cs
+/SWGOH Prereqs/obj/Debug/netcoreapp2.1/SWGOH Prereqs.pdb
+/SWGOH Prereqs/obj/Debug/netcoreapp2.1/SWGOH Prereqs.dll
+/SWGOH Prereqs/obj/Debug/netcoreapp2.1/SWGOH Prereqs.csprojAssemblyReference.cache
+/SWGOH Prereqs/obj/Debug/netcoreapp2.1/SWGOH Prereqs.csproj.FileListAbsolute.txt
+/SWGOH Prereqs/obj/Debug/netcoreapp2.1/SWGOH Prereqs.csproj.CoreCompileInputs.cache
+/SWGOH Prereqs/obj/Debug/netcoreapp2.1/SWGOH Prereqs.assets.cache
+/SWGOH Prereqs/obj/Debug/netcoreapp2.1/SWGOH Prereqs.AssemblyInfoInputs.cache
+/SWGOH Prereqs/obj/Debug/netcoreapp2.1/SWGOH Prereqs.AssemblyInfo.cs
+/SWGOH Prereqs/obj/Debug/netcoreapp2.1
+/SWGOH Prereqs/bin/Debug/netcoreapp2.1/SWGOH Prereqs.runtimeconfig.json
+/SWGOH Prereqs/bin/Debug/netcoreapp2.1/SWGOH Prereqs.runtimeconfig.dev.json
+/SWGOH Prereqs/bin/Debug/netcoreapp2.1/SWGOH Prereqs.pdb
+/SWGOH Prereqs/bin/Debug/netcoreapp2.1/SWGOH Prereqs.dll
+/SWGOH Prereqs/bin/Debug/netcoreapp2.1/SWGOH Prereqs.deps.json
+/SWGOH Prereqs/bin/Debug/netcoreapp2.1
+/.vs/SWGOH Prereqs/v15/Server/sqlite3/storage.ide-wal
+/.vs/SWGOH Prereqs/v15/Server/sqlite3/storage.ide-shm
+/.vs/SWGOH Prereqs/v15/Server/sqlite3/storage.ide
+/.vs/SWGOH Prereqs/v15/Server/sqlite3/db.lock
+/.vs/SWGOH Prereqs/v15/.suo
+/.vs/config/applicationhost.config

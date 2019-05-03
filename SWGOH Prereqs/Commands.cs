@@ -20,9 +20,6 @@ namespace SWGOH
         {
             // first retrieve the interactivity module from the client
             var interactivity = ctx.Client.GetInteractivityModule();
-            
-
-
 
             await ctx.RespondAsync("Well Done");
         }
@@ -31,10 +28,6 @@ namespace SWGOH
         {
             // first retrieve the interactivity module from the client
             var interactivity = ctx.Client.GetInteractivityModule();
-
-
-
-
 
             await ctx.RespondAsync("Well Done");
         }
@@ -56,63 +49,63 @@ namespace SWGOH
 
         public void test()
         {
-           /* Console.WriteLine("Fetching Guild...");
-            string guild = helper.fetchGuild(new uint[] { 729778685 });
-            Console.WriteLine("Guild Retrieved...: ");
-            guild = "{\"guild\":" + guild + "}";
-            // Console.WriteLine(guild);
-            // guild = guild.Remove(guild.Length - 1).Remove(0, 1);
-            GuildParse.Guild gi = JsonConvert.DeserializeObject<GuildParse.Guild>(guild);
-            uint[] members = new uint[gi.guild[0].Roster.Length];
-            for (int i = 0; i < gi.guild[0].Roster.Length; i++)
-            {
-                members[i] = gi.guild[0].Roster[i].AllyCode;
-            }
+            /* Console.WriteLine("Fetching Guild...");
+             string guild = helper.fetchGuild(new uint[] { 729778685 });
+             Console.WriteLine("Guild Retrieved...: ");
+             guild = "{\"guild\":" + guild + "}";
+             // Console.WriteLine(guild);
+             // guild = guild.Remove(guild.Length - 1).Remove(0, 1);
+             GuildParse.Guild gi = JsonConvert.DeserializeObject<GuildParse.Guild>(guild);
+             uint[] members = new uint[gi.guild[0].Roster.Length];
+             for (int i = 0; i < gi.guild[0].Roster.Length; i++)
+             {
+                 members[i] = gi.guild[0].Roster[i].AllyCode;
+             }
 
 
 
-            /*
-             * This block tests fetching player(s)
-             *
-            Console.WriteLine("Fetching Player(s)...");
-            string player = helper.fetchPlayer(new uint[] { 729778685, 155433894 });
-            //Console.WriteLine(player);
-            player = "{\"players\":" + player + "}";
-            PlayerParse.Player gm = PlayerParse.Player.FromJson(player);
-            Console.WriteLine("Player(s) retrieved...");
-            Console.WriteLine(gm.PlayerList.Length + " Player(s) Retrieved...");
-            PlayerParse.Roster[] toons = gm.PlayerList[0].Roster;
-            foreach (PlayerParse.Roster toon in toons)
-            {
-                Console.WriteLine(toon.NameKey);
-            }
+             /*
+              * This block tests fetching player(s)
+              *
+             Console.WriteLine("Fetching Player(s)...");
+             string player = helper.fetchPlayer(new uint[] { 729778685, 155433894 });
+             //Console.WriteLine(player);
+             player = "{\"players\":" + player + "}";
+             PlayerParse.Player gm = PlayerParse.Player.FromJson(player);
+             Console.WriteLine("Player(s) retrieved...");
+             Console.WriteLine(gm.PlayerList.Length + " Player(s) Retrieved...");
+             PlayerParse.Roster[] toons = gm.PlayerList[0].Roster;
+             foreach (PlayerParse.Roster toon in toons)
+             {
+                 Console.WriteLine(toon.NameKey);
+             }
 
 
 
-            /*
-             * 
-             * This block test pulling and processing a guild roster
-             *
-            Console.WriteLine("Fetching Guild...");
-            string guild = helper.fetchGuild(new uint[] { 729778685 });
-            Console.WriteLine("Guild Retrieved...: ");
-            guild = "{\"guild\":" + guild + "}";
-            Console.WriteLine(guild);
-            // guild = guild.Remove(guild.Length - 1).Remove(0, 1);
-            GuildParse.Guild gi = JsonConvert.DeserializeObject<GuildParse.Guild>(guild);
-            uint[] members = new uint[gi.guild[0].Roster.Length];
-            for (int i = 0; i < gi.guild[0].Roster.Length; i++)
-            {
-                members[i] = gi.guild[0].Roster[i].AllyCode;
-            }
-            Console.WriteLine("Fetching Guild Members...");
-            string guildroster = helper.fetchPlayer(members);
-            Console.WriteLine("Guild Members Retrieved...");
-            guildroster = "{\"players\":" + guildroster + "}";
-            //guildroster = guildroster.Remove(guild.Length - 1).Remove(0, 1);
-            PlayerParse.Player gm = PlayerParse.Player.FromJson(guildroster);
-            Console.WriteLine("Guild Processed...");
-            /**/
+             /*
+              * 
+              * This block test pulling and processing a guild roster
+              *
+             Console.WriteLine("Fetching Guild...");
+             string guild = helper.fetchGuild(new uint[] { 729778685 });
+             Console.WriteLine("Guild Retrieved...: ");
+             guild = "{\"guild\":" + guild + "}";
+             Console.WriteLine(guild);
+             // guild = guild.Remove(guild.Length - 1).Remove(0, 1);
+             GuildParse.Guild gi = JsonConvert.DeserializeObject<GuildParse.Guild>(guild);
+             uint[] members = new uint[gi.guild[0].Roster.Length];
+             for (int i = 0; i < gi.guild[0].Roster.Length; i++)
+             {
+                 members[i] = gi.guild[0].Roster[i].AllyCode;
+             }
+             Console.WriteLine("Fetching Guild Members...");
+             string guildroster = helper.fetchPlayer(members);
+             Console.WriteLine("Guild Members Retrieved...");
+             guildroster = "{\"players\":" + guildroster + "}";
+             //guildroster = guildroster.Remove(guild.Length - 1).Remove(0, 1);
+             PlayerParse.Player gm = PlayerParse.Player.FromJson(guildroster);
+             Console.WriteLine("Guild Processed...");
+             /**/
         }
 
         private struct ConfigJson
