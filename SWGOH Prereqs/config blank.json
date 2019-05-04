@@ -1,0 +1,7 @@
+﻿{
+  //this file needs to be renamed to config.json and placed in \bin\Debug\netcoreapp2.1\ of your project
+  "token": "yourtokenhere",
+  "prefix": ";;",
+  "username": "youruser",
+  "password": "yourpass"
+}
