@@ -8,7 +8,7 @@ This bot is a side project that is intended to give a player insight into whethe
 
 3. For Discord Platform I used [This Example](https://github.com/DSharpPlus/Example-Bots/tree/master/DSPlus.Examples.CSharp.Ex03) by [Emzi0767](https://github.com/Emzi0767) to get started.
 
-4. You will need to create a Discord app and get a token to run this as well: [Here](https://github.com/reactiflux/discord-irc/wiki/Creating-a-discord-bot-&-getting-a-token) is a good walkthrough on that
+4. You will need to create a Discord app and get a token to put in the config.json to run this as well: [Here](https://github.com/reactiflux/discord-irc/wiki/Creating-a-discord-bot-&-getting-a-token) is a good walkthrough on that
 
 It will pull a player's roster and check against star requirements for the event. If the player has the character, it will show character details instead.
 
