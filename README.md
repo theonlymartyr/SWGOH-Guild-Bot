@@ -15,6 +15,7 @@ It will pull a player's roster and check against star requirements for the event
 Possible future plans to add the ability to give gear level recommendations on an individual use. This could be tricky.
 
 Future plans to add the ability to see how the entire guild sits in relation to the event requirements, showing:
-    -If guildmates have the given character, show star level and power level
-    -If guildmates do not have the character, display needed character stats (this may be difficult for characters like padme where there is a larger faction able to be used)
-    -Possibly 
+    
+	--If guildmates have the given character, show star level and power level
+    --If guildmates do not have the character, display needed character stats (this may be difficult for characters like padme where there is a larger faction able to be used)
+    
