@@ -23,8 +23,8 @@ namespace SWGOH
         string events = "";
         string battles = "";
         string guild = "";
-
-        Dictionary<string, string> userAsDictonary;
+        DateTime signintime;
+        public bool loggedIn = false;
 
         private HttpClient client = new HttpClient();
 
@@ -48,7 +48,7 @@ namespace SWGOH
             data = url + "/swgoh/data/";
             player = url + "/swgoh/player/";
             guild = url + "/swgoh/guild/";
-            units = url + "/swgoh/units/";
+            units = url + "/swgoh/roster/";
             zetas = url + "/swgoh/zetas/";
             squads = url + "/swgoh/squads/";
             events = url + "/swgoh/events/";
@@ -60,31 +60,66 @@ namespace SWGOH
 
             try
             {
-                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(this.signin);
-                request.Method = "POST";
-                request.ContentType = "application/x-www-form-urlencoded";
-                byte[] byteArray = Encoding.UTF8.GetBytes(user);
-                request.ContentLength = byteArray.Length;
+                //If we don't have a token, try to load them from the file
+                if (token == null || signintime.Equals(null)) { loadTokens(); }
+                //Check to see if token is still valid. Doesn't matter if file doesn't exist, signintime will default to a time that is >3600 seconds from DateTime.Now
+                //So token sill be set to null and a  new token will be grabbed.
+                checkToken();
+                if (string.IsNullOrEmpty(token))
+                {
+                    HttpWebRequest request = (HttpWebRequest)WebRequest.Create(this.signin);
+                    request.Method = "POST";
+                    request.ContentType = "application/x-www-form-urlencoded";
+                    byte[] byteArray = Encoding.UTF8.GetBytes(user);
+                    request.ContentLength = byteArray.Length;
 
-                Stream dataStream = request.GetRequestStream();
-                dataStream.Write(byteArray, 0, byteArray.Length);
-                dataStream.Close();
-                WebResponse response = request.GetResponse();
-                Console.WriteLine(((HttpWebResponse)response).StatusDescription);
-                dataStream = response.GetResponseStream();
-                StreamReader reader = new StreamReader(dataStream);
-                var loginresponse = reader.ReadToEnd();
-                reader.Close();
-                dataStream.Close();
-                response.Close();
+                    Stream dataStream = request.GetRequestStream();
+                    dataStream.Write(byteArray, 0, byteArray.Length);
+                    dataStream.Close();
+                    WebResponse response = request.GetResponse();
+                    dataStream = response.GetResponseStream();
+                    StreamReader reader = new StreamReader(dataStream);
+                    var loginresponse = reader.ReadToEnd();
+                    reader.Close();
+                    dataStream.Close();
+                    response.Close();
 
-                var loginResponseObject = JsonConvert.DeserializeObject<LoginResponse>(loginresponse);
-                token = loginResponseObject.access_token;
+                    var loginResponseObject = JsonConvert.DeserializeObject<LoginResponse>(loginresponse);
+                    token = loginResponseObject.access_token;
+                    writeValues(token);
+                    loggedIn = true;
+                }
             }
-            catch (Exception e)
+            catch (Exception e) { throw e; }
+        }
+        public void checkToken()
+        {
+            DateTime dt = DateTime.Now;
+            if (dt > signintime.AddSeconds(3600) || (signintime.AddSeconds(3600) - dt).Seconds > 45) { token = null; loggedIn = false; Console.WriteLine("Token not valid"); } else { loggedIn = true; Console.WriteLine("Token is still valid"); }
+        }
+
+        public void writeValues(string json)
+        {
+            try
             {
-                throw e;
+                string text = $"{json},{DateTime.Now}";
+                // WriteAllText creates a file, writes the specified string to the file,
+                // and then closes the file.    You do NOT need to call Flush() or Close().
+                File.WriteAllText(@"C:\Users\jake\Documents\swgoh\SWGOH Prereqs\SWGOH Prereqs\values.txt", text);
             }
+            catch (Exception e) { Console.WriteLine(e.StackTrace); }
+        }
+
+        public void loadTokens()
+        {
+            try
+            {
+                string text = File.ReadAllText(@"C:\Users\jake\Documents\swgoh\SWGOH Prereqs\SWGOH Prereqs\values.txt");
+                string[] keys = text.Split(",");
+                token = keys[0];
+                signintime = Convert.ToDateTime(keys[1]);
+            }
+            catch (Exception e) { Console.WriteLine(e.StackTrace); }
         }
 
         public string fetchApi(string url, object param)
@@ -106,7 +141,7 @@ namespace SWGOH
                 }
 
                 WebResponse response = request.GetResponse();
-                Console.WriteLine(((HttpWebResponse)response).StatusDescription);
+                //Console.WriteLine(((HttpWebResponse)response).StatusDescription);
                 var dataStream = response.GetResponseStream();
                 StreamReader reader = new StreamReader(dataStream);
                 var apiResponse = reader.ReadToEnd();
@@ -231,7 +266,7 @@ namespace SWGOH
             dynamic obj = new ExpandoObject();
             obj.allycodes = allycodes;
             if (language != null)
-                obj.language = language;
+                obj.language = "ENG_US";
             if (enums.HasValue)
                 obj.enums = enums;
             if (roster.HasValue)

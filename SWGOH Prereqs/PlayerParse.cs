@@ -15,9 +15,6 @@ namespace PlayerParse
 
     public partial class PlayerElement
     {
-        [JsonProperty("allyCode")]
-        public long AllyCode { get; set; }
-
         [JsonProperty("id")]
         public string Id { get; set; }
 
@@ -26,6 +23,9 @@ namespace PlayerParse
 
         [JsonProperty("level")]
         public long Level { get; set; }
+
+        [JsonProperty("allyCode")]
+        public long AllyCode { get; set; }
 
         [JsonProperty("titles")]
         public Portraits Titles { get; set; }
@@ -54,6 +54,9 @@ namespace PlayerParse
         [JsonProperty("arena")]
         public Arena Arena { get; set; }
 
+        [JsonProperty("updated")]
+        public long Updated { get; set; }
+
         [JsonProperty("lastActivity")]
         public long LastActivity { get; set; }
 
@@ -63,8 +66,11 @@ namespace PlayerParse
         [JsonProperty("portraits")]
         public Portraits Portraits { get; set; }
 
-        [JsonProperty("updated")]
-        public long Updated { get; set; }
+        [JsonProperty("grandArena")]
+        public GrandArena[] GrandArena { get; set; }
+
+        [JsonProperty("grandArenaLifeTime")]
+        public long GrandArenaLifeTime { get; set; }
     }
 
     public partial class Arena
@@ -95,6 +101,45 @@ namespace PlayerParse
 
         [JsonProperty("squadUnitType")]
         public long SquadUnitType { get; set; }
+    }
+
+    public partial class GrandArena
+    {
+        [JsonProperty("seasonId")]
+        public string SeasonId { get; set; }
+
+        [JsonProperty("eventInstanceId")]
+        public string EventInstanceId { get; set; }
+
+        [JsonProperty("league")]
+        public string League { get; set; }
+
+        [JsonProperty("wins")]
+        public long Wins { get; set; }
+
+        [JsonProperty("losses")]
+        public long Losses { get; set; }
+
+        [JsonProperty("eliteDivision")]
+        public bool EliteDivision { get; set; }
+
+        [JsonProperty("seasonPoints")]
+        public long SeasonPoints { get; set; }
+
+        [JsonProperty("division")]
+        public long Division { get; set; }
+
+        [JsonProperty("joinTime")]
+        public long JoinTime { get; set; }
+
+        [JsonProperty("endTime")]
+        public long EndTime { get; set; }
+
+        [JsonProperty("remove")]
+        public bool Remove { get; set; }
+
+        [JsonProperty("rank")]
+        public long Rank { get; set; }
     }
 
     public partial class Portraits
@@ -146,6 +191,12 @@ namespace PlayerParse
 
         [JsonProperty("gp")]
         public long Gp { get; set; }
+
+        [JsonProperty("primaryUnitStat")]
+        public object PrimaryUnitStat { get; set; }
+
+        [JsonProperty("relic")]
+        public Relic Relic { get; set; }
     }
 
     public partial class Crew
@@ -159,11 +210,14 @@ namespace PlayerParse
         [JsonProperty("skillReferenceList")]
         public SkillReferenceList[] SkillReferenceList { get; set; }
 
+        [JsonProperty("skilllessCrewAbilityId")]
+        public string SkilllessCrewAbilityId { get; set; }
+
         [JsonProperty("gp")]
         public long Gp { get; set; }
 
         [JsonProperty("cp")]
-        public long Cp { get; set; }
+        public double Cp { get; set; }
     }
 
     public partial class SkillReferenceList
@@ -176,6 +230,9 @@ namespace PlayerParse
 
         [JsonProperty("requiredRarity")]
         public long RequiredRarity { get; set; }
+
+        [JsonProperty("requiredRelicTier")]
+        public long RequiredRelicTier { get; set; }
     }
 
     public partial class Equipped
@@ -238,6 +295,12 @@ namespace PlayerParse
         public long Roll { get; set; }
     }
 
+    public partial class Relic
+    {
+        [JsonProperty("currentTier")]
+        public long CurrentTier { get; set; }
+    }
+
     public partial class Skill
     {
         [JsonProperty("id")]
@@ -251,6 +314,9 @@ namespace PlayerParse
 
         [JsonProperty("isZeta")]
         public bool IsZeta { get; set; }
+
+        [JsonProperty("tiers")]
+        public long Tiers { get; set; }
     }
 
     public partial class Stat

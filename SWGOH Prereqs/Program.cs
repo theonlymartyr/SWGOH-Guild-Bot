@@ -17,7 +17,7 @@ namespace SWGOH
         public DiscordClient Client { get; set; }
         public InteractivityModule Interactivity { get; set; }
         public CommandsNextModule Commands { get; set; }
-
+        public ConfigJson cfgjson;
         public static void Main(string[] args)
         {
             // since we cannot make the entry method asynchronous, let's pass the execution to asynchronous code
@@ -136,12 +136,14 @@ namespace SWGOH
 
         private async Task Commands_CommandErrored(CommandErrorEventArgs e)
         {
+            loadJSON();
             // let's log the error details
             e.Context.Client.DebugLogger.LogMessage(LogLevel.Error, "SWGOHBot", $"{e.Context.User.Username} tried executing '{e.Command?.QualifiedName ?? "<unknown command>"}' but it errored: {e.Exception.GetType()}: {e.Exception.Message ?? "<no message>"}", DateTime.Now);
 
             // let's check if the error is a result of lack of required permissions
             if (e.Exception is ChecksFailedException ex)
             {
+
                 // yes, the user lacks required permissions,  let them know
                 var emoji = DiscordEmoji.FromName(e.Context.Client, ":no_entry:");
 
@@ -154,16 +156,17 @@ namespace SWGOH
                 };
                 await e.Context.RespondAsync("", embed: embed);
             }
+
             if (e.Exception is ArgumentException)
             {
-                var json = "";
-                using (var fs = File.OpenRead("config.json"))
-                using (var sr = new StreamReader(fs, new UTF8Encoding(false)))
-                    json = await sr.ReadToEndAsync();
 
-                // next, let's load the values from that file to our client's configuration
-                var cfgjson = JsonConvert.DeserializeObject<ConfigJson>(json);
                 String s = "";
+
+                if (!AllyCode.IsValid(Convert.ToUInt32(e.Exception.Data["allycode"])))
+                {
+                    s = $":scream:The ally code given is invalid, please try again with a valid ally code.";
+                }
+                else { }
                 var emoji = DiscordEmoji.FromName(e.Context.Client, ":no_entry:");
 
                 if (e.Exception.Data.Keys.Count > 0)
@@ -176,7 +179,10 @@ namespace SWGOH
                         }
                     }
                 }
-                else { s = $":scream:You haven't told me anything. I need to know who I'm looking for and for whom\nTry {cfgjson.CommandPrefix}reqs <character> <ally code>"; }
+                else
+                {
+                    //s = $":scream:You haven't told me anything. I need to know who I'm looking for and for whom\nTry {cfgjson.CommandPrefix}reqs <character> <ally code>";
+                }
                 // let's wrap the response into an embed
                 var embed = new DiscordEmbedBuilder
                 {
@@ -186,6 +192,16 @@ namespace SWGOH
                 };
                 await e.Context.RespondAsync("", embed: embed);
             }
+        }
+        public async void loadJSON()
+        {
+            var json = "";
+            using (var fs = File.OpenRead("config.json"))
+            using (var sr = new StreamReader(fs, new UTF8Encoding(false)))
+                json = await sr.ReadToEndAsync();
+
+            // next, let's load the values from that file to our client's configuration
+            cfgjson = JsonConvert.DeserializeObject<ConfigJson>(json);
         }
     }
 
