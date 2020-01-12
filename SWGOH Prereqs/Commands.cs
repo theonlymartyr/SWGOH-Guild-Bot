@@ -330,7 +330,7 @@ namespace SWGOH
                     int maxWidth = 75;
                     string header = $"{guilds.guild[0].Name}  VS  {guilds.guild[1].Name}";
                     int space = maxWidth - header.Length;
-
+                    //Get guilds and build arrays of players
                     PlayerParse.Player players1 = getGuildMembers(buildMemberArray(guilds.guild[0].Roster)), players2 = getGuildMembers(buildMemberArray(guilds.guild[1].Roster));
                     GuildParse.GuildMember guild1 = guilds.guild[0], guild2 = guilds.guild[1];
                     //Build our output
