@@ -9,8 +9,13 @@ using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
 using DSharpPlus.Interactivity;
+using MongoDB.Bson;
+using MongoDB.Driver;
 using Newtonsoft.Json;
 using SWGOH_Prereqs;
+using System.Data.SqlClient;
+using System.Collections;
+using System.Text.RegularExpressions;
 
 namespace SWGOH
 {
@@ -249,11 +254,15 @@ namespace SWGOH
             {"GAMORREANGUARD", "Gamorrean Guard" }
 
         };
-        [Command("gs"), Description("Gets guild stats")]
-        public async Task getPrereqs(CommandContext ctx, [Description("Ally Code to lookup")] uint allycode)
+        //Mod unit stat 5 is speed
+        #region guildstats
+        [Command("gs"), Description("Gets guild stats"), Aliases("guildstats", "stats")]
+        public async Task getPrereqs(CommandContext ctx, [Description("Ally Code to lookup")] uint allycode, [RemainingText][Description("Sort Type. Can be gp or name, optionally followed by asc or desc. gp desc is default")] string sort)
         {
+            DataHelper dh = new DataHelper();
             try
             {
+                string sortedBy = "GP DESCENDING";
                 await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":stopwatch:"));
                 DateTime start = DateTime.Now;
                 // first retrieve the interactivity module from the client
@@ -262,26 +271,37 @@ namespace SWGOH
                 //login to the API
                 login();
 
-                GuildParse.Guild guilds = getGuild(new uint[] { allycode });
+                GuildParse.Guild guilds = dh.getGuild(new uint[] { allycode }, helper);
                 if (guilds.guild.Length > 0)
                 {
+                    Database db = new Database();
+                    SqlDataReader reader = db.GetRecords("*", "guilds", "GuildIGID = '" + guilds.guild[0].Id + "'");
+                    int id = 0;
+                    if (!reader.Read())
+                    {
+                        Hashtable hash = new Hashtable();
+                        hash.Add("GuildName", guilds.guild[0].Name);
+                        hash.Add("GuildIGID", guilds.guild[0].Id.ToString());
+                        id = db.InsertRow(hash, "guilds");
+                        hash.Clear();
+                        Console.WriteLine(id);
+                        DateTime myDateTime = DateTime.Now;
+                        string sqlFormattedDate = myDateTime.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                        hash.Add("GuildID", id);
+                        hash.Add("TimeUpdated", sqlFormattedDate);
+                        hash.Add("GuildData", guilds.ToJson().ToString());
+                        hash.Add("RequestingUserDiscordID", ctx.Member.Mention.ToString());
+
+                        db.InsertRow(hash, "guilddata");
+                    }
                     int maxWidth = 75;
                     string header = $"{guilds.guild[0].Name} Stats ";
                     int space = maxWidth - header.Length;
 
-                    PlayerParse.Player players1 = getGuildMembers(buildMemberArray(guilds.guild[0].Roster));
+                    PlayerParse.Player players1 = dh.getGuildMembers(dh.buildMemberArray(guilds.guild[0].Roster), helper);
                     GuildParse.GuildMember guild = guilds.guild[0];
                     //Build our output
-                    s += "**" + header + "**\n";
-                    s += "======= Overview =======```\n";
-                    s += createLine("Members:", guild.Members.ToString());
-                    s += createLine("Total GP:", (guild.Gp / 1000000).ToString() + "M");
-                    s += createLine("Character GP:", buildCharGP(guild.Roster, "Char").ToString() + "M");
-                    s += createLine("Fleet GP:", buildCharGP(guild.Roster, "Fleet").ToString() + "M");
-                    s += "```";
-                    await ctx.RespondAsync(ctx.Member.Mention + " Here is the information you requested:");
-                    await ctx.RespondAsync(s);
-                    s = "";
+
                     var embed = new DiscordEmbedBuilder
                     {
                         Title = "Stats",
@@ -292,10 +312,18 @@ namespace SWGOH
                         Title = "Stats",
                         Color = new DiscordColor(0xFF0000) // red
                     };
-
-                    buildPlayerStats(players1, embed, embed2);
-
-                    await ctx.RespondAsync("", embed: embed);
+                    await ctx.Message.DeleteOwnReactionAsync(DiscordEmoji.FromName(ctx.Client, ":stopwatch:"));
+                    sortedBy = dh.buildPlayerStats(players1, embed, embed2, sort, id);
+                    s += "**" + header + sortedBy + "**\n";
+                    s += "======= Overview =======\n";
+                    s += dh.createLine("Members:", guild.Members.ToString());
+                    s += dh.createLine("Total GP:", (guild.Gp / 1000000).ToString() + "M");
+                    s += dh.createLine("Character GP:", dh.buildCharGP(guild.Roster, "Char").ToString() + "M");
+                    s += dh.createLine("Fleet GP:", dh.buildCharGP(guild.Roster, "Fleet").ToString() + "M");
+                    s += "";
+                    embed.Title = s;
+                    if (ctx.Guild != null) { await ctx.RespondAsync(ctx.Member.Mention + " Here is the information you requested:", embed: embed); }
+                    else { await ctx.RespondAsync(" Here is the information you requested:", embed: embed); }
                     await ctx.RespondAsync("", embed: embed2);
                 }
                 DateTime end = DateTime.Now;
@@ -303,11 +331,14 @@ namespace SWGOH
                 await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":thumbsup:"));
             }
             catch (Exception e) { Console.WriteLine(e.StackTrace); await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":thumbsdown:")); }
-
         }
+        #endregion
+
+        #region TW
         [Command("tw"), Description("Compares 2 guilds for TW")]
         public async Task TWCompare(CommandContext ctx, [Description("Ally code of one guild")] uint allycode1, [Description("Ally Code of other guild")] uint allycode2)
         {
+            DataHelper dh = new DataHelper();
             try
             {
                 await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":stopwatch:"));
@@ -319,243 +350,325 @@ namespace SWGOH
                 login();
                 //Retreive the 2 guilds to compare using an allycode for a member of each guild
                 //If both allycodes are from the same guild, only one guild will return, make sure to check for that
-                GuildParse.Guild guilds = getGuild(new uint[] { allycode1, allycode2 });
+                GuildParse.Guild guilds = dh.getGuild(new uint[] { allycode1, allycode2 }, helper);
                 if (guilds.guild.Length > 1)
                 {
                     var embed = new DiscordEmbedBuilder
                     {
-                        Title = "Stats",
+                        Title = "TW Comparison",
                         Color = new DiscordColor(0xFF0000) // red
                     };
                     int maxWidth = 75;
                     string header = $"{guilds.guild[0].Name}  VS  {guilds.guild[1].Name}";
                     int space = maxWidth - header.Length;
                     //Get guilds and build arrays of players
-                    PlayerParse.Player players1 = getGuildMembers(buildMemberArray(guilds.guild[0].Roster)), players2 = getGuildMembers(buildMemberArray(guilds.guild[1].Roster));
+                    PlayerParse.Player players1 = dh.getGuildMembers(dh.buildMemberArray(guilds.guild[0].Roster), helper), players2 = dh.getGuildMembers(dh.buildMemberArray(guilds.guild[1].Roster), helper);
                     GuildParse.GuildMember guild1 = guilds.guild[0], guild2 = guilds.guild[1];
                     //Build our output
                     s += "**" + header + "**\n";
                     s += "======= Overview =======```\n";
-                    s += createHeaderLine("Members:", guild1.Members.ToString(), guild2.Members.ToString());
-                    s += createHeaderLine("Total GP:", (guild1.Gp / 1000000).ToString() + "M", (guild2.Gp / 1000000).ToString() + "M");
-                    s += createHeaderLine("Character GP:", buildCharGP(guild1.Roster, "Char").ToString() + "M", buildCharGP(guild2.Roster, "Char").ToString() + "M");
-                    s += createHeaderLine("Fleet GP:", buildCharGP(guild1.Roster, "Fleet").ToString() + "M", buildCharGP(guild2.Roster, "Fleet").ToString() + "M");
+                    s += dh.createHeaderLine("Members:", guild1.Members.ToString(), guild2.Members.ToString());
+                    s += dh.createHeaderLine("Total GP:", (guild1.Gp / 1000000).ToString() + "M", (guild2.Gp / 1000000).ToString() + "M");
+                    s += dh.createHeaderLine("Character GP:", dh.buildCharGP(guild1.Roster, "Char").ToString() + "M", dh.buildCharGP(guild2.Roster, "Char").ToString() + "M");
+                    s += dh.createHeaderLine("Fleet GP:", dh.buildCharGP(guild1.Roster, "Fleet").ToString() + "M", dh.buildCharGP(guild2.Roster, "Fleet").ToString() + "M");
                     s += "```";
-                    //await ctx.RespondAsync(ctx.Member.Mention + " Here is the information you requested:");
-                    // await ctx.RespondAsync(s);
                     embed.Description = s;
                     ToonStats ts1 = new ToonStats(), ts2 = new ToonStats();
-                    getGuildStats(players1, ts1);
-                    getGuildStats(players2, ts2);
+                    dh.getGuildStats(players1, ts1);
+                    dh.getGuildStats(players2, ts2);
+                    #region gear
                     title = "==Gear==\n";
                     embeds += "```CSS\n";
-                    embeds += createLine("G11:", ts1.G11.ToString(), ts2.G11.ToString());
-                    embeds += createLine("G12:", ts1.G12.ToString(), ts2.G12.ToString());
-                    embeds += createLine("G12+1:", ts1.G121.ToString(), ts2.G121.ToString());
-                    embeds += createLine("G12+2:", ts1.G122.ToString(), ts2.G122.ToString());
-                    embeds += createLine("G12+3:", ts1.G123.ToString(), ts2.G123.ToString());
-                    embeds += createLine("G12+4:", ts1.G124.ToString(), ts2.G124.ToString());
-                    embeds += createLine("G12+5:", ts1.G125.ToString(), ts2.G125.ToString());
-                    embeds += createLine("G13:", ts1.G13.ToString(), ts2.G13.ToString());
+                    embeds += dh.createLongLine("G11:", ts1.G11.ToString(), ts2.G11.ToString());
+                    embeds += dh.createLongLine("G12:", ts1.G12.ToString(), ts2.G12.ToString());
+                    embeds += dh.createLongLine("G12+1:", ts1.G121.ToString(), ts2.G121.ToString());
+                    embeds += dh.createLongLine("G12+2:", ts1.G122.ToString(), ts2.G122.ToString());
+                    embeds += dh.createLongLine("G12+3:", ts1.G123.ToString(), ts2.G123.ToString());
+                    embeds += dh.createLongLine("G12+4:", ts1.G124.ToString(), ts2.G124.ToString());
+                    embeds += dh.createLongLine("G12+5:", ts1.G125.ToString(), ts2.G125.ToString());
+                    embeds += dh.createLongLine("G13:", ts1.G13.ToString(), ts2.G13.ToString());
                     embeds += "```";
-                    embed.AddField($"{title}", embeds, true);
+                    embed.AddField($"{title}", embeds, false);
+                    #endregion
+                    #region relics
                     title = "==Relics==";
                     embeds = "```CSS\n";
-                    embeds += createLine("Total Relics:", ts1.TotalRelics.ToString(), ts2.TotalRelics.ToString());
-                    embeds += createLine("Relic 0:", ts1.relics[0].ToString(), ts2.relics[0].ToString());
-                    embeds += createLine("Relic 1:", ts1.relics[1].ToString(), ts2.relics[1].ToString());
-                    embeds += createLine("Relic 2:", ts1.relics[2].ToString(), ts2.relics[2].ToString());
-                    embeds += createLine("Relic 3:", ts1.relics[3].ToString(), ts2.relics[3].ToString());
-                    embeds += createLine("Relic 4:", ts1.relics[4].ToString(), ts2.relics[4].ToString());
-                    embeds += createLine("Relic 5:", ts1.relics[5].ToString(), ts2.relics[5].ToString());
-                    embeds += createLine("Relic 6:", ts1.relics[6].ToString(), ts2.relics[6].ToString());
-                    embeds += createLine("Relic 7:", ts1.relics[7].ToString(), ts2.relics[7].ToString());
+                    embeds += dh.createLongLine("Total Relics:", ts1.TotalRelics.ToString(), ts2.TotalRelics.ToString());
+                    embeds += dh.createLongLine("Relic 0:", ts1.relics[0].ToString(), ts2.relics[0].ToString());
+                    embeds += dh.createLongLine("Relic 1:", ts1.relics[1].ToString(), ts2.relics[1].ToString());
+                    embeds += dh.createLongLine("Relic 2:", ts1.relics[2].ToString(), ts2.relics[2].ToString());
+                    embeds += dh.createLongLine("Relic 3:", ts1.relics[3].ToString(), ts2.relics[3].ToString());
+                    embeds += dh.createLongLine("Relic 4:", ts1.relics[4].ToString(), ts2.relics[4].ToString());
+                    embeds += dh.createLongLine("Relic 5:", ts1.relics[5].ToString(), ts2.relics[5].ToString());
+                    embeds += dh.createLongLine("Relic 6:", ts1.relics[6].ToString(), ts2.relics[6].ToString());
+                    embeds += dh.createLongLine("Relic 7:", ts1.relics[7].ToString(), ts2.relics[7].ToString());
+                    embeds += "```";
+                    embed.AddField($"{title}", embeds, false);
+                    #endregion
+                    #region mods
+                    title = "==Mods==";
+                    embeds = "```CSS\n";
+                    embeds += dh.createLongLine("6 Dot Mods:", ts1.sixStarMods.ToString(), ts2.sixStarMods.ToString());
+                    embeds += dh.createLongLine("10+ Speed:", ts1.speedMods[0].ToString(), ts2.speedMods[0].ToString());
+                    embeds += dh.createLongLine("15+ Speed:", ts1.speedMods[1].ToString(), ts2.speedMods[1].ToString());
+                    embeds += dh.createLongLine("20+ Speed:", ts1.speedMods[2].ToString(), ts2.speedMods[2].ToString());
+                    embeds += dh.createLongLine("25+ Speed:", ts1.speedMods[3].ToString(), ts2.speedMods[3].ToString());
+                    embeds += dh.createLongLine("100+ Off:", ts1.off100.ToString(), ts2.off100.ToString());
+                    embeds += "```";
+                    embed.AddField($"{title}", embeds, false);
+                    #endregion
+                    #region GAS
+                    title = "=Gen Skywalker=";
+                    embeds = "```CSS\n";
+                    embeds += dh.createLine("Total:", ts1.gas.Total.ToString(), ts2.gas.Total.ToString());
+                    embeds += dh.createLine("7*:", ts1.gas.stars[2].ToString(), ts2.gas.stars[2].ToString());
+                    embeds += dh.createLine("6*:", ts1.gas.stars[1].ToString(), ts2.gas.stars[1].ToString());
+                    embeds += dh.createLine("5*:", ts1.gas.stars[0].ToString(), ts2.gas.stars[0].ToString());
+                    embeds += dh.createLine("G11:", ts1.gas.gear[0].ToString(), ts2.gas.gear[0].ToString());
+                    embeds += dh.createLine("G12:", ts1.gas.gear[1].ToString(), ts2.gas.gear[1].ToString());
+                    embeds += dh.createLine("G13:", ts1.gas.gear[2].ToString(), ts2.gas.gear[2].ToString());
+                    embeds += dh.createLine("Relic 4+:", (ts1.gas.relics[4] + ts1.gas.relics[5] + ts1.gas.relics[6] + ts1.gas.relics[7]).ToString(), (ts2.gas.relics[4] + ts2.gas.relics[5] + ts2.gas.relics[6] + ts2.gas.relics[7]).ToString());
+                    embeds += dh.createLine("Relic 7:", ts1.gas.relics[7].ToString(), ts2.gas.relics[7].ToString());
+                    embeds += dh.createLine("GP 16K+:", ts1.gas.gp16.ToString(), ts2.gas.gp16.ToString());
+                    embeds += dh.createLine("GP 20K+:", ts1.gas.gp20.ToString(), ts2.gas.gp20.ToString());
+                    embeds += dh.createLine("Z:", ts1.gas.z.ToString(), ts2.gas.z.ToString());
+                    embeds += dh.createLine("ZZ:", ts1.gas.zz.ToString(), ts2.gas.zz.ToString());
+                    embeds += dh.createLine("ZZZ:", ts1.gas.zzz.ToString(), ts2.gas.zzz.ToString());
+                    embeds += dh.createLine("ZZZZ:", ts1.gas.zzzz.ToString(), ts2.gas.zzzz.ToString());
                     embeds += "```";
                     embed.AddField($"{title}", embeds, true);
+                    #endregion
+                    #region Malak
                     title = "=Malak=";
                     embeds = "```CSS\n";
-                    embeds += createLine("Total:", ts1.dm.Total.ToString(), ts2.dm.Total.ToString());
-                    embeds += createLine("7*:", ts1.dm.stars[2].ToString(), ts2.dm.stars[2].ToString());
-                    embeds += createLine("6*:", ts1.dm.stars[1].ToString(), ts2.dm.stars[1].ToString());
-                    embeds += createLine("5*:", ts1.dm.stars[0].ToString(), ts2.dm.stars[0].ToString());
-                    embeds += createLine("G11:", ts1.dm.stars[0].ToString(), ts2.dm.stars[0].ToString());
-                    embeds += createLine("G12:", ts1.dm.stars[1].ToString(), ts2.dm.stars[1].ToString());
-                    embeds += createLine("G13:", ts1.dm.stars[2].ToString(), ts2.dm.stars[2].ToString());
-                    embeds += createLine("Relic 4+:", (ts1.dm.relics[4] + ts1.dm.relics[5] + ts1.dm.relics[6] + ts1.dm.relics[7]).ToString(), (ts2.dm.relics[4] + ts2.dm.relics[5] + ts2.dm.relics[6] + ts2.dm.relics[7]).ToString());
-                    embeds += createLine("Relic 7:", ts1.dm.relics[7].ToString(), ts2.dm.relics[7].ToString());
-                    embeds += createLine("GP 16K+:", ts1.dm.gp16.ToString(), ts2.dm.gp16.ToString());
-                    embeds += createLine("GP 20K+:", ts1.dm.gp20.ToString(), ts2.dm.gp20.ToString());
+                    embeds += dh.createLine("Total:", ts1.dm.Total.ToString(), ts2.dm.Total.ToString());
+                    embeds += dh.createLine("7*:", ts1.dm.stars[2].ToString(), ts2.dm.stars[2].ToString());
+                    embeds += dh.createLine("6*:", ts1.dm.stars[1].ToString(), ts2.dm.stars[1].ToString());
+                    embeds += dh.createLine("5*:", ts1.dm.stars[0].ToString(), ts2.dm.stars[0].ToString());
+                    embeds += dh.createLine("G11:", ts1.dm.gear[0].ToString(), ts2.dm.gear[0].ToString());
+                    embeds += dh.createLine("G12:", ts1.dm.gear[1].ToString(), ts2.dm.gear[1].ToString());
+                    embeds += dh.createLine("G13:", ts1.dm.gear[2].ToString(), ts2.dm.gear[2].ToString());
+                    embeds += dh.createLine("Relic 4+:", (ts1.dm.relics[4] + ts1.dm.relics[5] + ts1.dm.relics[6] + ts1.dm.relics[7]).ToString(), (ts2.dm.relics[4] + ts2.dm.relics[5] + ts2.dm.relics[6] + ts2.dm.relics[7]).ToString());
+                    embeds += dh.createLine("Relic 7:", ts1.dm.relics[7].ToString(), ts2.dm.relics[7].ToString());
+                    embeds += dh.createLine("GP 16K+:", ts1.dm.gp16.ToString(), ts2.dm.gp16.ToString());
+                    embeds += dh.createLine("GP 20K+:", ts1.dm.gp20.ToString(), ts2.dm.gp20.ToString());
+                    embeds += dh.createLine("Z:", ts1.dm.z.ToString(), ts2.dm.z.ToString());
+                    embeds += dh.createLine("ZZ:", ts1.dm.zz.ToString(), ts2.dm.zz.ToString());
                     embeds += "```";
                     embed.AddField($"{title}", embeds, true);
+                    #endregion
+                    #region Padme
                     title = "=Padme=";
                     embeds = "```CSS\n";
-                    embeds += createLine("Total:", ts1.padme.Total.ToString(), ts2.padme.Total.ToString());
-                    embeds += createLine("7*:", ts1.padme.stars[2].ToString(), ts2.padme.stars[2].ToString());
-                    embeds += createLine("6*:", ts1.padme.stars[1].ToString(), ts2.padme.stars[1].ToString());
-                    embeds += createLine("5*:", ts1.padme.stars[0].ToString(), ts2.padme.stars[0].ToString());
-                    embeds += createLine("G11:", ts1.padme.stars[0].ToString(), ts2.padme.stars[0].ToString());
-                    embeds += createLine("G12:", ts1.padme.stars[1].ToString(), ts2.padme.stars[1].ToString());
-                    embeds += createLine("G13:", ts1.padme.stars[2].ToString(), ts2.padme.stars[2].ToString());
-                    embeds += createLine("Relic 4+:", (ts1.padme.relics[4] + ts1.padme.relics[5] + ts1.padme.relics[6] + ts1.padme.relics[7]).ToString(), (ts2.padme.relics[4] + ts2.padme.relics[5] + ts2.padme.relics[6] + ts2.padme.relics[7]).ToString());
-                    embeds += createLine("Relic 7:", ts1.padme.relics[7].ToString(), ts2.padme.relics[7].ToString());
-                    embeds += createLine("GP 16K+:", ts1.padme.gp16.ToString(), ts2.padme.gp16.ToString());
-                    embeds += createLine("GP 20K+:", ts1.padme.gp20.ToString(), ts2.padme.gp20.ToString());
+                    embeds += dh.createLine("Total:", ts1.padme.Total.ToString(), ts2.padme.Total.ToString());
+                    embeds += dh.createLine("7*:", ts1.padme.stars[2].ToString(), ts2.padme.stars[2].ToString());
+                    embeds += dh.createLine("6*:", ts1.padme.stars[1].ToString(), ts2.padme.stars[1].ToString());
+                    embeds += dh.createLine("5*:", ts1.padme.stars[0].ToString(), ts2.padme.stars[0].ToString());
+                    embeds += dh.createLine("G11:", ts1.padme.gear[0].ToString(), ts2.padme.gear[0].ToString());
+                    embeds += dh.createLine("G12:", ts1.padme.gear[1].ToString(), ts2.padme.gear[1].ToString());
+                    embeds += dh.createLine("G13:", ts1.padme.gear[2].ToString(), ts2.padme.gear[2].ToString());
+                    embeds += dh.createLine("Relic 4+:", (ts1.padme.relics[4] + ts1.padme.relics[5] + ts1.padme.relics[6] + ts1.padme.relics[7]).ToString(), (ts2.padme.relics[4] + ts2.padme.relics[5] + ts2.padme.relics[6] + ts2.padme.relics[7]).ToString());
+                    embeds += dh.createLine("Relic 7:", ts1.padme.relics[7].ToString(), ts2.padme.relics[7].ToString());
+                    embeds += dh.createLine("GP 16K+:", ts1.padme.gp16.ToString(), ts2.padme.gp16.ToString());
+                    embeds += dh.createLine("GP 20K+:", ts1.padme.gp20.ToString(), ts2.padme.gp20.ToString());
+                    embeds += dh.createLine("Z:", ts1.padme.z.ToString(), ts2.padme.z.ToString());
+                    embeds += dh.createLine("ZZ:", ts1.padme.zz.ToString(), ts2.padme.zz.ToString());
                     embeds += "```";
                     embed.AddField($"{title}", embeds, true);
+                    #endregion
+                    #region JKR
                     title = "=JKR=";
                     embeds = "```CSS\n";
-                    embeds += createLine("Total:", ts1.jkr.Total.ToString(), ts2.padme.Total.ToString());
-                    embeds += createLine("7*:", ts1.jkr.stars[2].ToString(), ts2.jkr.stars[2].ToString());
-                    embeds += createLine("6*:", ts1.jkr.stars[1].ToString(), ts2.jkr.stars[1].ToString());
-                    embeds += createLine("5*:", ts1.jkr.stars[0].ToString(), ts2.jkr.stars[0].ToString());
-                    embeds += createLine("G11:", ts1.jkr.stars[0].ToString(), ts2.jkr.stars[0].ToString());
-                    embeds += createLine("G12:", ts1.jkr.stars[1].ToString(), ts2.jkr.stars[1].ToString());
-                    embeds += createLine("G13:", ts1.jkr.stars[2].ToString(), ts2.jkr.stars[2].ToString());
-                    embeds += createLine("Relic 4+:", (ts1.jkr.relics[4] + ts1.jkr.relics[5] + ts1.jkr.relics[6] + ts1.jkr.relics[7]).ToString(), (ts2.jkr.relics[4] + ts2.jkr.relics[5] + ts2.jkr.relics[6] + ts2.jkr.relics[7]).ToString());
-                    embeds += createLine("Relic 7:", ts1.jkr.relics[7].ToString(), ts2.jkr.relics[7].ToString());
-                    embeds += createLine("GP 16K+:", ts1.jkr.gp16.ToString(), ts2.jkr.gp16.ToString());
-                    embeds += createLine("GP 20K+:", ts1.jkr.gp20.ToString(), ts2.jkr.gp20.ToString());
+                    embeds += dh.createLine("Total:", ts1.jkr.Total.ToString(), ts2.padme.Total.ToString());
+                    embeds += dh.createLine("7*:", ts1.jkr.stars[2].ToString(), ts2.jkr.stars[2].ToString());
+                    embeds += dh.createLine("6*:", ts1.jkr.stars[1].ToString(), ts2.jkr.stars[1].ToString());
+                    embeds += dh.createLine("5*:", ts1.jkr.stars[0].ToString(), ts2.jkr.stars[0].ToString());
+                    embeds += dh.createLine("G11:", ts1.jkr.gear[0].ToString(), ts2.jkr.gear[0].ToString());
+                    embeds += dh.createLine("G12:", ts1.jkr.gear[1].ToString(), ts2.jkr.gear[1].ToString());
+                    embeds += dh.createLine("G13:", ts1.jkr.gear[2].ToString(), ts2.jkr.gear[2].ToString());
+                    embeds += dh.createLine("Relic 4+:", (ts1.jkr.relics[4] + ts1.jkr.relics[5] + ts1.jkr.relics[6] + ts1.jkr.relics[7]).ToString(), (ts2.jkr.relics[4] + ts2.jkr.relics[5] + ts2.jkr.relics[6] + ts2.jkr.relics[7]).ToString());
+                    embeds += dh.createLine("Relic 7:", ts1.jkr.relics[7].ToString(), ts2.jkr.relics[7].ToString());
+                    embeds += dh.createLine("GP 16K+:", ts1.jkr.gp16.ToString(), ts2.jkr.gp16.ToString());
+                    embeds += dh.createLine("GP 20K+:", ts1.jkr.gp20.ToString(), ts2.jkr.gp20.ToString());
+                    embeds += dh.createLine("Z:", ts1.jkr.z.ToString(), ts2.jkr.z.ToString());
+                    embeds += dh.createLine("ZZ:", ts1.jkr.zz.ToString(), ts2.jkr.zz.ToString());
+                    embeds += dh.createLine("ZZZ:", ts1.jkr.zzz.ToString(), ts2.jkr.zzz.ToString());
                     embeds += "```";
                     embed.AddField($"{title}", embeds, true);
+                    #endregion
+                    #region Grievous
                     title = "=Grievous=";
                     embeds = "```CSS\n";
-                    embeds += createLine("Total:", ts1.grievous.Total.ToString(), ts2.grievous.Total.ToString());
-                    embeds += createLine("7*:", ts1.grievous.stars[2].ToString(), ts2.grievous.stars[2].ToString());
-                    embeds += createLine("6*:", ts1.grievous.stars[1].ToString(), ts2.grievous.stars[1].ToString());
-                    embeds += createLine("5*:", ts1.grievous.stars[0].ToString(), ts2.grievous.stars[0].ToString());
-                    embeds += createLine("G11:", ts1.grievous.stars[0].ToString(), ts2.grievous.stars[0].ToString());
-                    embeds += createLine("G12:", ts1.grievous.stars[1].ToString(), ts2.grievous.stars[1].ToString());
-                    embeds += createLine("G13:", ts1.grievous.stars[2].ToString(), ts2.grievous.stars[2].ToString());
-                    embeds += createLine("Relic 4+:", (ts1.grievous.relics[4] + ts1.grievous.relics[5] + ts1.grievous.relics[6] + ts1.grievous.relics[7]).ToString(), (ts2.grievous.relics[4] + ts2.grievous.relics[5] + ts2.grievous.relics[6] + ts2.grievous.relics[7]).ToString());
-                    embeds += createLine("Relic 7:", ts1.grievous.relics[7].ToString(), ts2.grievous.relics[7].ToString());
-                    embeds += createLine("GP 16K+:", ts1.grievous.gp16.ToString(), ts2.grievous.gp16.ToString());
-                    embeds += createLine("GP 20K+:", ts1.grievous.gp20.ToString(), ts2.grievous.gp20.ToString());
+                    embeds += dh.createLine("Total:", ts1.grievous.Total.ToString(), ts2.grievous.Total.ToString());
+                    embeds += dh.createLine("7*:", ts1.grievous.stars[2].ToString(), ts2.grievous.stars[2].ToString());
+                    embeds += dh.createLine("6*:", ts1.grievous.stars[1].ToString(), ts2.grievous.stars[1].ToString());
+                    embeds += dh.createLine("5*:", ts1.grievous.stars[0].ToString(), ts2.grievous.stars[0].ToString());
+                    embeds += dh.createLine("G11:", ts1.grievous.gear[0].ToString(), ts2.grievous.gear[0].ToString());
+                    embeds += dh.createLine("G12:", ts1.grievous.gear[1].ToString(), ts2.grievous.gear[1].ToString());
+                    embeds += dh.createLine("G13:", ts1.grievous.gear[2].ToString(), ts2.grievous.gear[2].ToString());
+                    embeds += dh.createLine("Relic 4+:", (ts1.grievous.relics[4] + ts1.grievous.relics[5] + ts1.grievous.relics[6] + ts1.grievous.relics[7]).ToString(), (ts2.grievous.relics[4] + ts2.grievous.relics[5] + ts2.grievous.relics[6] + ts2.grievous.relics[7]).ToString());
+                    embeds += dh.createLine("Relic 7:", ts1.grievous.relics[7].ToString(), ts2.grievous.relics[7].ToString());
+                    embeds += dh.createLine("GP 16K+:", ts1.grievous.gp16.ToString(), ts2.grievous.gp16.ToString());
+                    embeds += dh.createLine("GP 20K+:", ts1.grievous.gp20.ToString(), ts2.grievous.gp20.ToString());
+                    embeds += dh.createLine("Z:", ts1.grievous.z.ToString(), ts2.grievous.z.ToString());
+                    embeds += dh.createLine("ZZ:", ts1.grievous.zz.ToString(), ts2.grievous.zz.ToString());
                     embeds += "```";
                     embed.AddField($"{title}", embeds, true);
+                    #endregion
+                    #region Nest
                     title = "=Nest=";
                     embeds = "```CSS\n";
-                    embeds += createLine("Total:", ts1.en.Total.ToString(), ts2.en.Total.ToString());
-                    embeds += createLine("7*:", ts1.en.stars[2].ToString(), ts2.en.stars[2].ToString());
-                    embeds += createLine("6*:", ts1.en.stars[1].ToString(), ts2.en.stars[1].ToString());
-                    embeds += createLine("5*:", ts1.en.stars[0].ToString(), ts2.en.stars[0].ToString());
-                    embeds += createLine("G11:", ts1.en.stars[0].ToString(), ts2.en.stars[0].ToString());
-                    embeds += createLine("G12:", ts1.en.stars[1].ToString(), ts2.en.stars[1].ToString());
-                    embeds += createLine("G13:", ts1.en.stars[2].ToString(), ts2.en.stars[2].ToString());
-                    embeds += createLine("Relic 4+:", (ts1.en.relics[4] + ts1.en.relics[5] + ts1.en.relics[6] + ts1.en.relics[7]).ToString(), (ts2.en.relics[4] + ts2.en.relics[5] + ts2.en.relics[6] + ts2.en.relics[7]).ToString());
-                    embeds += createLine("Relic 7:", ts1.en.relics[7].ToString(), ts2.en.relics[7].ToString());
-                    embeds += createLine("GP 16K+:", ts1.en.gp16.ToString(), ts2.en.gp16.ToString());
-                    embeds += createLine("GP 20K+:", ts1.en.gp20.ToString(), ts2.en.gp20.ToString());
+                    embeds += dh.createLine("Total:", ts1.en.Total.ToString(), ts2.en.Total.ToString());
+                    embeds += dh.createLine("7*:", ts1.en.stars[2].ToString(), ts2.en.stars[2].ToString());
+                    embeds += dh.createLine("6*:", ts1.en.stars[1].ToString(), ts2.en.stars[1].ToString());
+                    embeds += dh.createLine("5*:", ts1.en.stars[0].ToString(), ts2.en.stars[0].ToString());
+                    embeds += dh.createLine("G11:", ts1.en.gear[0].ToString(), ts2.en.gear[0].ToString());
+                    embeds += dh.createLine("G12:", ts1.en.gear[1].ToString(), ts2.en.gear[1].ToString());
+                    embeds += dh.createLine("G13:", ts1.en.gear[2].ToString(), ts2.en.gear[2].ToString());
+                    embeds += dh.createLine("Relic 4+:", (ts1.en.relics[4] + ts1.en.relics[5] + ts1.en.relics[6] + ts1.en.relics[7]).ToString(), (ts2.en.relics[4] + ts2.en.relics[5] + ts2.en.relics[6] + ts2.en.relics[7]).ToString());
+                    embeds += dh.createLine("Relic 7:", ts1.en.relics[7].ToString(), ts2.en.relics[7].ToString());
+                    embeds += dh.createLine("GP 16K+:", ts1.en.gp16.ToString(), ts2.en.gp16.ToString());
+                    embeds += dh.createLine("GP 20K+:", ts1.en.gp20.ToString(), ts2.en.gp20.ToString());
                     embeds += "```";
                     embed.AddField($"{title}", embeds, true);
+                    #endregion
+                    #region BSF
                     title = "=BSF=";
                     embeds = "```CSS\n";
-                    embeds += createLine("Total:", ts1.bsf.Total.ToString(), ts2.bsf.Total.ToString());
-                    embeds += createLine("7*:", ts1.bsf.stars[2].ToString(), ts2.bsf.stars[2].ToString());
-                    embeds += createLine("6*:", ts1.bsf.stars[1].ToString(), ts2.bsf.stars[1].ToString());
-                    embeds += createLine("5*:", ts1.bsf.stars[0].ToString(), ts2.bsf.stars[0].ToString());
-                    embeds += createLine("G11:", ts1.bsf.stars[0].ToString(), ts2.bsf.stars[0].ToString());
-                    embeds += createLine("G12:", ts1.bsf.stars[1].ToString(), ts2.bsf.stars[1].ToString());
-                    embeds += createLine("G13:", ts1.bsf.stars[2].ToString(), ts2.bsf.stars[2].ToString());
-                    embeds += createLine("Relic 4+:", (ts1.bsf.relics[4] + ts1.bsf.relics[5] + ts1.bsf.relics[6] + ts1.bsf.relics[7]).ToString(), (ts2.bsf.relics[4] + ts2.bsf.relics[5] + ts2.bsf.relics[6] + ts2.bsf.relics[7]).ToString());
-                    embeds += createLine("Relic 7:", ts1.bsf.relics[7].ToString(), ts2.bsf.relics[7].ToString());
-                    embeds += createLine("GP 16K+:", ts1.bsf.gp16.ToString(), ts2.bsf.gp16.ToString());
-                    embeds += createLine("GP 20K+:", ts1.bsf.gp20.ToString(), ts2.bsf.gp20.ToString());
+                    embeds += dh.createLine("Total:", ts1.bsf.Total.ToString(), ts2.bsf.Total.ToString());
+                    embeds += dh.createLine("7*:", ts1.bsf.stars[2].ToString(), ts2.bsf.stars[2].ToString());
+                    embeds += dh.createLine("6*:", ts1.bsf.stars[1].ToString(), ts2.bsf.stars[1].ToString());
+                    embeds += dh.createLine("5*:", ts1.bsf.stars[0].ToString(), ts2.bsf.stars[0].ToString());
+                    embeds += dh.createLine("G11:", ts1.bsf.gear[0].ToString(), ts2.bsf.gear[0].ToString());
+                    embeds += dh.createLine("G12:", ts1.bsf.gear[1].ToString(), ts2.bsf.gear[1].ToString());
+                    embeds += dh.createLine("G13:", ts1.bsf.gear[2].ToString(), ts2.bsf.gear[2].ToString());
+                    embeds += dh.createLine("Relic 4+:", (ts1.bsf.relics[4] + ts1.bsf.relics[5] + ts1.bsf.relics[6] + ts1.bsf.relics[7]).ToString(), (ts2.bsf.relics[4] + ts2.bsf.relics[5] + ts2.bsf.relics[6] + ts2.bsf.relics[7]).ToString());
+                    embeds += dh.createLine("Relic 7:", ts1.bsf.relics[7].ToString(), ts2.bsf.relics[7].ToString());
+                    embeds += dh.createLine("GP 16K+:", ts1.bsf.gp16.ToString(), ts2.bsf.gp16.ToString());
+                    embeds += dh.createLine("GP 20K+:", ts1.bsf.gp20.ToString(), ts2.bsf.gp20.ToString());
+                    embeds += dh.createLine("Z:", ts1.bsf.z.ToString(), ts2.bsf.z.ToString());
                     embeds += "```";
                     embed.AddField($"{title}", embeds, true);
+                    #endregion
+                    #region DR
                     title = " =DR=";
                     embeds = "```CSS\n";
-                    embeds += createLine("Total:", ts1.dr.Total.ToString(), ts2.dr.Total.ToString());
-                    embeds += createLine("7*:", ts1.dr.stars[2].ToString(), ts2.dr.stars[2].ToString());
-                    embeds += createLine("6*:", ts1.dr.stars[1].ToString(), ts2.dr.stars[1].ToString());
-                    embeds += createLine("5*:", ts1.dr.stars[0].ToString(), ts2.dr.stars[0].ToString());
-                    embeds += createLine("G11:", ts1.dr.stars[0].ToString(), ts2.dr.stars[0].ToString());
-                    embeds += createLine("G12:", ts1.dr.stars[1].ToString(), ts2.dr.stars[1].ToString());
-                    embeds += createLine("G13:", ts1.dr.stars[2].ToString(), ts2.dr.stars[2].ToString());
-                    embeds += createLine("Relic 4+:", (ts1.dr.relics[4] + ts1.dr.relics[5] + ts1.dr.relics[6] + ts1.dr.relics[7]).ToString(), (ts2.dr.relics[4] + ts2.dr.relics[5] + ts2.dr.relics[6] + ts2.dr.relics[7]).ToString());
-                    embeds += createLine("Relic 7:", ts1.dr.relics[7].ToString(), ts2.dr.relics[7].ToString());
-                    embeds += createLine("GP 16K+:", ts1.dr.gp16.ToString(), ts2.dr.gp16.ToString());
-                    embeds += createLine("GP 20K+:", ts1.dr.gp20.ToString(), ts2.dr.gp20.ToString());
+                    embeds += dh.createLine("Total:", ts1.dr.Total.ToString(), ts2.dr.Total.ToString());
+                    embeds += dh.createLine("7*:", ts1.dr.stars[2].ToString(), ts2.dr.stars[2].ToString());
+                    embeds += dh.createLine("6*:", ts1.dr.stars[1].ToString(), ts2.dr.stars[1].ToString());
+                    embeds += dh.createLine("5*:", ts1.dr.stars[0].ToString(), ts2.dr.stars[0].ToString());
+                    embeds += dh.createLine("G11:", ts1.dr.gear[0].ToString(), ts2.dr.gear[0].ToString());
+                    embeds += dh.createLine("G12:", ts1.dr.gear[1].ToString(), ts2.dr.gear[1].ToString());
+                    embeds += dh.createLine("G13:", ts1.dr.gear[2].ToString(), ts2.dr.gear[2].ToString());
+                    embeds += dh.createLine("Relic 4+:", (ts1.dr.relics[4] + ts1.dr.relics[5] + ts1.dr.relics[6] + ts1.dr.relics[7]).ToString(), (ts2.dr.relics[4] + ts2.dr.relics[5] + ts2.dr.relics[6] + ts2.dr.relics[7]).ToString());
+                    embeds += dh.createLine("Relic 7:", ts1.dr.relics[7].ToString(), ts2.dr.relics[7].ToString());
+                    embeds += dh.createLine("GP 16K+:", ts1.dr.gp16.ToString(), ts2.dr.gp16.ToString());
+                    embeds += dh.createLine("GP 20K+:", ts1.dr.gp20.ToString(), ts2.dr.gp20.ToString());
+                    embeds += dh.createLine("Z:", ts1.gas.z.ToString(), ts2.gas.z.ToString());
+                    embeds += dh.createLine("ZZ:", ts1.gas.zz.ToString(), ts2.gas.zz.ToString());
+                    embeds += dh.createLine("ZZZ:", ts1.gas.zzz.ToString(), ts2.gas.zzz.ToString());
                     embeds += "```";
                     embed.AddField($"{title}", embeds, true);
+                    #endregion
+                    #region Traya
                     title = "=Traya=";
                     embeds = "```CSS\n";
-                    embeds += createLine("Total:", ts1.traya.Total.ToString(), ts2.traya.Total.ToString());
-                    embeds += createLine("7*:", ts1.traya.stars[2].ToString(), ts2.traya.stars[2].ToString());
-                    embeds += createLine("6*:", ts1.traya.stars[1].ToString(), ts2.traya.stars[1].ToString());
-                    embeds += createLine("5*:", ts1.traya.stars[0].ToString(), ts2.traya.stars[0].ToString());
-                    embeds += createLine("G11:", ts1.traya.stars[0].ToString(), ts2.traya.stars[0].ToString());
-                    embeds += createLine("G12:", ts1.traya.stars[1].ToString(), ts2.traya.stars[1].ToString());
-                    embeds += createLine("G13:", ts1.traya.stars[2].ToString(), ts2.traya.stars[2].ToString());
-                    embeds += createLine("Relic 4+:", (ts1.traya.relics[4] + ts1.traya.relics[5] + ts1.traya.relics[6] + ts1.traya.relics[7]).ToString(), (ts2.traya.relics[4] + ts2.traya.relics[5] + ts2.traya.relics[6] + ts2.traya.relics[7]).ToString());
-                    embeds += createLine("Relic 7:", ts1.traya.relics[7].ToString(), ts2.traya.relics[7].ToString());
-                    embeds += createLine("GP 16K+:", ts1.traya.gp16.ToString(), ts2.traya.gp16.ToString());
-                    embeds += createLine("GP 20K+:", ts1.traya.gp20.ToString(), ts2.traya.gp20.ToString());
+                    embeds += dh.createLine("Total:", ts1.traya.Total.ToString(), ts2.traya.Total.ToString());
+                    embeds += dh.createLine("7*:", ts1.traya.stars[2].ToString(), ts2.traya.stars[2].ToString());
+                    embeds += dh.createLine("6*:", ts1.traya.stars[1].ToString(), ts2.traya.stars[1].ToString());
+                    embeds += dh.createLine("5*:", ts1.traya.stars[0].ToString(), ts2.traya.stars[0].ToString());
+                    embeds += dh.createLine("G11:", ts1.traya.gear[0].ToString(), ts2.traya.gear[0].ToString());
+                    embeds += dh.createLine("G12:", ts1.traya.gear[1].ToString(), ts2.traya.gear[1].ToString());
+                    embeds += dh.createLine("G13:", ts1.traya.gear[2].ToString(), ts2.traya.gear[2].ToString());
+                    embeds += dh.createLine("Relic 4+:", (ts1.traya.relics[4] + ts1.traya.relics[5] + ts1.traya.relics[6] + ts1.traya.relics[7]).ToString(), (ts2.traya.relics[4] + ts2.traya.relics[5] + ts2.traya.relics[6] + ts2.traya.relics[7]).ToString());
+                    embeds += dh.createLine("Relic 7:", ts1.traya.relics[7].ToString(), ts2.traya.relics[7].ToString());
+                    embeds += dh.createLine("GP 16K+:", ts1.traya.gp16.ToString(), ts2.traya.gp16.ToString());
+                    embeds += dh.createLine("GP 20K+:", ts1.traya.gp20.ToString(), ts2.traya.gp20.ToString());
+                    embeds += dh.createLine("Z:", ts1.traya.z.ToString(), ts2.traya.z.ToString());
+                    embeds += dh.createLine("ZZ:", ts1.traya.zz.ToString(), ts2.traya.zz.ToString());
                     embeds += "```";
                     embed.AddField($"{title}", embeds, true);
+                    #endregion
+                    #region GBA
                     title = "=GBA=";
                     embeds = "```CSS\n";
-                    embeds += createLine("Total:", ts1.gba.Total.ToString(), ts2.gba.Total.ToString());
-                    embeds += createLine("7*:", ts1.gba.stars[2].ToString(), ts2.gba.stars[2].ToString());
-                    embeds += createLine("6*:", ts1.gba.stars[1].ToString(), ts2.gba.stars[1].ToString());
-                    embeds += createLine("5*:", ts1.gba.stars[0].ToString(), ts2.gba.stars[0].ToString());
-                    embeds += createLine("G11:", ts1.gba.stars[0].ToString(), ts2.gba.stars[0].ToString());
-                    embeds += createLine("G12:", ts1.gba.stars[1].ToString(), ts2.gba.stars[1].ToString());
-                    embeds += createLine("G13:", ts1.gba.stars[2].ToString(), ts2.gba.stars[2].ToString());
-                    embeds += createLine("Relic 4+:", (ts1.gba.relics[4] + ts1.gba.relics[5] + ts1.gba.relics[6] + ts1.gba.relics[7]).ToString(), (ts2.gba.relics[4] + ts2.gba.relics[5] + ts2.gba.relics[6] + ts2.gba.relics[7]).ToString());
-                    embeds += createLine("Relic 7:", ts1.gba.relics[7].ToString(), ts2.gba.relics[7].ToString());
-                    embeds += createLine("GP 16K+:", ts1.gba.gp16.ToString(), ts2.gba.gp16.ToString());
-                    embeds += createLine("GP 20K+:", ts1.gba.gp20.ToString(), ts2.gba.gp20.ToString());
+                    embeds += dh.createLine("Total:", ts1.gba.Total.ToString(), ts2.gba.Total.ToString());
+                    embeds += dh.createLine("7*:", ts1.gba.stars[2].ToString(), ts2.gba.stars[2].ToString());
+                    embeds += dh.createLine("6*:", ts1.gba.stars[1].ToString(), ts2.gba.stars[1].ToString());
+                    embeds += dh.createLine("5*:", ts1.gba.stars[0].ToString(), ts2.gba.stars[0].ToString());
+                    embeds += dh.createLine("G11:", ts1.gba.gear[0].ToString(), ts2.gba.gear[0].ToString());
+                    embeds += dh.createLine("G12:", ts1.gba.gear[1].ToString(), ts2.gba.gear[1].ToString());
+                    embeds += dh.createLine("G13:", ts1.gba.gear[2].ToString(), ts2.gba.gear[2].ToString());
+                    embeds += dh.createLine("Relic 4+:", (ts1.gba.relics[4] + ts1.gba.relics[5] + ts1.gba.relics[6] + ts1.gba.relics[7]).ToString(), (ts2.gba.relics[4] + ts2.gba.relics[5] + ts2.gba.relics[6] + ts2.gba.relics[7]).ToString());
+                    embeds += dh.createLine("Relic 7:", ts1.gba.relics[7].ToString(), ts2.gba.relics[7].ToString());
+                    embeds += dh.createLine("GP 16K+:", ts1.gba.gp16.ToString(), ts2.gba.gp16.ToString());
+                    embeds += dh.createLine("GP 20K+:", ts1.gba.gp20.ToString(), ts2.gba.gp20.ToString());
+                    embeds += dh.createLine("Z:", ts1.gba.z.ToString(), ts2.gba.z.ToString());
+                    embeds += dh.createLine("ZZ:", ts1.gba.zz.ToString(), ts2.gba.zz.ToString());
                     embeds += "```";
                     embed.AddField($"{title}", embeds, true);
+                    #endregion
+                    #region Bossk
                     title = "=Bossk=";
                     embeds = "```CSS\n";
-                    embeds += createLine("Total:", ts1.bossk.Total.ToString(), ts2.bossk.Total.ToString());
-                    embeds += createLine("7*:", ts1.bossk.stars[2].ToString(), ts2.bossk.stars[2].ToString());
-                    embeds += createLine("6*:", ts1.bossk.stars[1].ToString(), ts2.bossk.stars[1].ToString());
-                    embeds += createLine("5*:", ts1.bossk.stars[0].ToString(), ts2.bossk.stars[0].ToString());
-                    embeds += createLine("G11:", ts1.bossk.stars[0].ToString(), ts2.bossk.stars[0].ToString());
-                    embeds += createLine("G12:", ts1.bossk.stars[1].ToString(), ts2.bossk.stars[1].ToString());
-                    embeds += createLine("G13:", ts1.bossk.stars[2].ToString(), ts2.bossk.stars[2].ToString());
-                    embeds += createLine("Relic 4+:", (ts1.bossk.relics[4] + ts1.bossk.relics[5] + ts1.bossk.relics[6] + ts1.bossk.relics[7]).ToString(), (ts2.bossk.relics[4] + ts2.bossk.relics[5] + ts2.bossk.relics[6] + ts2.bossk.relics[7]).ToString());
-                    embeds += createLine("Relic 7:", ts1.bossk.relics[7].ToString(), ts2.bossk.relics[7].ToString());
-                    embeds += createLine("GP 16K+:", ts1.bossk.gp16.ToString(), ts2.bossk.gp16.ToString());
-                    embeds += createLine("GP 20K+:", ts1.bossk.gp20.ToString(), ts2.bossk.gp20.ToString());
+                    embeds += dh.createLine("Total:", ts1.bossk.Total.ToString(), ts2.bossk.Total.ToString());
+                    embeds += dh.createLine("7*:", ts1.bossk.stars[2].ToString(), ts2.bossk.stars[2].ToString());
+                    embeds += dh.createLine("6*:", ts1.bossk.stars[1].ToString(), ts2.bossk.stars[1].ToString());
+                    embeds += dh.createLine("5*:", ts1.bossk.stars[0].ToString(), ts2.bossk.stars[0].ToString());
+                    embeds += dh.createLine("G11:", ts1.bossk.gear[0].ToString(), ts2.bossk.gear[0].ToString());
+                    embeds += dh.createLine("G12:", ts1.bossk.gear[1].ToString(), ts2.bossk.gear[1].ToString());
+                    embeds += dh.createLine("G13:", ts1.bossk.gear[2].ToString(), ts2.bossk.gear[2].ToString());
+                    embeds += dh.createLine("Relic 4+:", (ts1.bossk.relics[4] + ts1.bossk.relics[5] + ts1.bossk.relics[6] + ts1.bossk.relics[7]).ToString(), (ts2.bossk.relics[4] + ts2.bossk.relics[5] + ts2.bossk.relics[6] + ts2.bossk.relics[7]).ToString());
+                    embeds += dh.createLine("Relic 7:", ts1.bossk.relics[7].ToString(), ts2.bossk.relics[7].ToString());
+                    embeds += dh.createLine("GP 16K+:", ts1.bossk.gp16.ToString(), ts2.bossk.gp16.ToString());
+                    embeds += dh.createLine("GP 20K+:", ts1.bossk.gp20.ToString(), ts2.bossk.gp20.ToString());
+                    embeds += dh.createLine("Z:", ts1.bossk.z.ToString(), ts2.bossk.z.ToString());
+                    embeds += dh.createLine("ZZ:", ts1.bossk.zz.ToString(), ts2.bossk.zz.ToString());
                     embeds += "```";
                     embed.AddField($"{title}", embeds, true);
+                    #endregion
+                    #region HT
                     title = "=Hound's Tooth=";
                     embeds = "```CSS\n";
-                    embeds += createLine("Total:", ts1.ht.Total.ToString(), ts2.ht.Total.ToString());
-                    embeds += createLine("7*:", ts1.ht.stars[2].ToString(), ts2.ht.stars[2].ToString());
-                    embeds += createLine("6*:", ts1.ht.stars[1].ToString(), ts2.ht.stars[1].ToString());
-                    embeds += createLine("5*:", ts1.ht.stars[0].ToString(), ts2.ht.stars[0].ToString());
+                    embeds += dh.createLine("Total:", ts1.ht.Total.ToString(), ts2.ht.Total.ToString());
+                    embeds += dh.createLine("7*:", ts1.ht.stars[2].ToString(), ts2.ht.stars[2].ToString());
+                    embeds += dh.createLine("6*:", ts1.ht.stars[1].ToString(), ts2.ht.stars[1].ToString());
+                    embeds += dh.createLine("5*:", ts1.ht.stars[0].ToString(), ts2.ht.stars[0].ToString());
                     embeds += "```";
                     embed.AddField($"{title}", embeds, true);
+                    #endregion
+                    #region MilFal
                     title = "=Han's Falcon=";
                     embeds = "```CSS\n";
-                    embeds += createLine("Total:", ts1.mf.Total.ToString(), ts2.mf.Total.ToString());
-                    embeds += createLine("7*:", ts1.mf.stars[2].ToString(), ts2.mf.stars[2].ToString());
-                    embeds += createLine("6*:", ts1.mf.stars[1].ToString(), ts2.mf.stars[1].ToString());
-                    embeds += createLine("5*:", ts1.mf.stars[0].ToString(), ts2.mf.stars[0].ToString());
+                    embeds += dh.createLine("Total:", ts1.mf.Total.ToString(), ts2.mf.Total.ToString());
+                    embeds += dh.createLine("7*:", ts1.mf.stars[2].ToString(), ts2.mf.stars[2].ToString());
+                    embeds += dh.createLine("6*:", ts1.mf.stars[1].ToString(), ts2.mf.stars[1].ToString());
+                    embeds += dh.createLine("5*:", ts1.mf.stars[0].ToString(), ts2.mf.stars[0].ToString());
                     embeds += "```";
                     embed.AddField($"{title}", embeds, true);
+                    #endregion
+                    #region Negotiator    
                     title = "=Negotiator=";
                     embeds = "```CSS\n";
-                    embeds += createLine("Total:", ts1.nego.Total.ToString(), ts2.nego.Total.ToString());
-                    embeds += createLine("7*:", ts1.nego.stars[2].ToString(), ts2.nego.stars[2].ToString());
-                    embeds += createLine("6*:", ts1.nego.stars[1].ToString(), ts2.nego.stars[1].ToString());
-                    embeds += createLine("5*:", ts1.nego.stars[0].ToString(), ts2.nego.stars[0].ToString());
+                    embeds += dh.createLine("Total:", ts1.nego.Total.ToString(), ts2.nego.Total.ToString());
+                    embeds += dh.createLine("7*:", ts1.nego.stars[2].ToString(), ts2.nego.stars[2].ToString());
+                    embeds += dh.createLine("6*:", ts1.nego.stars[1].ToString(), ts2.nego.stars[1].ToString());
+                    embeds += dh.createLine("5*:", ts1.nego.stars[0].ToString(), ts2.nego.stars[0].ToString());
                     embeds += "```";
                     embed.AddField($"{title}", embeds, true);
+                    #endregion
+                    #region Malevolence
                     title = "=Malevolence=";
                     embeds = "```CSS\n";
-                    embeds += createLine("Total:", ts1.mal.Total.ToString(), ts2.mal.Total.ToString());
-                    embeds += createLine("7*:", ts1.mal.stars[2].ToString(), ts2.mal.stars[2].ToString());
-                    embeds += createLine("6*:", ts1.mal.stars[1].ToString(), ts2.mal.stars[1].ToString());
-                    embeds += createLine("5*:", ts1.mal.stars[0].ToString(), ts2.mal.stars[0].ToString());
+                    embeds += dh.createLine("Total:", ts1.mal.Total.ToString(), ts2.mal.Total.ToString());
+                    embeds += dh.createLine("7*:", ts1.mal.stars[2].ToString(), ts2.mal.stars[2].ToString());
+                    embeds += dh.createLine("6*:", ts1.mal.stars[1].ToString(), ts2.mal.stars[1].ToString());
+                    embeds += dh.createLine("5*:", ts1.mal.stars[0].ToString(), ts2.mal.stars[0].ToString());
                     embeds += "```";
                     embed.AddField($"{title}", embeds, true);
-
+                    #endregion
                     await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":thumbsup:"));
+
                     DateTime end = DateTime.Now;
                     Console.WriteLine((end - start).TotalSeconds);
                     await ctx.RespondAsync(ctx.Member.Mention + " Here is the information you requested:", embed: embed);
@@ -566,289 +679,175 @@ namespace SWGOH
                 }
             }
             catch (Exception e) { Console.WriteLine(e.StackTrace); }
-            await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":thumbsup:"));
         }
-
-        public List<string> buildPlayerStats(PlayerParse.Player r, DiscordEmbedBuilder b, DiscordEmbedBuilder b2)
-        {
-            List<string> players = new List<string>();
-            int i = 0;
-
-            foreach (PlayerParse.PlayerElement pe in r.PlayerList)
-            {
-                String s = "", r7 = "";
-                int g13 = 0, g12 = 0, relics = 0;
-                int[] rLevel = new int[8];
-                foreach (PlayerParse.Roster rost in pe.Roster)
-                {
-                    if (rost.Gear == 12) { g12++; }
-                    if (rost.Gear == 13)
-                    {
-                        g13++;
-                        if (rost.Relic.CurrentTier > 1)
-                        {
-                            relics++; rLevel[rost.Relic.CurrentTier - 2]++;
-
-                            if ((rost.Relic.CurrentTier - 2) == 7) { r7 += "." + toons.GetValueOrDefault(rost.DefId) + "\n"; }
-                        }
-                    }
-                }
-                s += "```CSS\n";
-                s += createLine("GP:", String.Format(CultureInfo.InvariantCulture, "{0:#,##,M}", (double)pe.Stats[0].Value));
-                s += createLine("Toon GP:", pe.Stats[1].Value.ToString("#,##,M", CultureInfo.InvariantCulture));
-                s += createLine("Ship GP:", pe.Stats[2].Value.ToString("#,##,M", CultureInfo.InvariantCulture));
-                s += createLine("R7:", rLevel[7].ToString());
-                if (r7.Length > 0) { s += createLine("", r7.TrimEnd('\n')); }
-                s += createLine("R4+:", (rLevel[7] + rLevel[6] + rLevel[5] + rLevel[4]).ToString());
-                s += createLine("G13:", g13.ToString());
-                s += createLine("G12:", g12.ToString());
-                s += "```";
-                if (i < 25) { b.AddField($"={pe.Name}=", s.Replace(",", "."), true); }
-                else { b2.AddField($"={pe.Name}=", s.Replace(",", "."), true); }
-                s = "";
-                i++;
-            }
-
-            return players;
-        }
-
-        public void getGuildStats(PlayerParse.Player guild, ToonStats ts)
+        #endregion
+        [Command("register"), Description("register allycode to discord handle"), Aliases("r"), Hidden]
+        public async Task registerMember(CommandContext ctx, [Description("Ally Code to register")] uint allycode, [RemainingText][Description("Discord User to register to ally code")] string user)
         {
             try
             {
-                foreach (PlayerParse.PlayerElement pe in guild.PlayerList)
+                String added = "";
+                Database db = new Database();
+                SqlDataReader reader = db.GetRecords("*", "Users", "Allycode = " + allycode);
+                Console.WriteLine(reader.FieldCount);
+                var embed = new DiscordEmbedBuilder();
+                if (!reader.Read())
                 {
-                    foreach (PlayerParse.Roster r in pe.Roster)
+                    Hashtable hash = new Hashtable();
+                    if (user != null)
                     {
-                        switch (r.DefId)
-                        {
-                            case "HOUNDSTOOTH":
-                                if (r.Rarity >= 5) { ts.ht.stars[r.Rarity - 5]++; }
-                                ts.ht.Total++;
-                                break;
-                            case "DARTHTRAYA":
-                                if (r.Rarity >= 5) { ts.traya.stars[r.Rarity - 5]++; }
-                                ts.traya.Total++;
-                                if (r.Relic.CurrentTier > 1) { ts.traya.relics[r.Relic.CurrentTier - 2]++; ts.traya.totRel++; }
-                                if (r.Gp >= 16000)
-                                {
-                                    if (r.Gp >= 20000)
-                                        ts.traya.gp20++;
-                                    else
-                                        ts.traya.gp16++;
-                                }
-                                break;
+                        DiscordUser ds = ctx.Message.MentionedUsers[0];
+                        added = user;
+                        hash.Add("DiscordID", user);
+                        hash.Add("Username", ds.Username);
+                    }
+                    else
+                    {
+                        added = ctx.Member.Mention;
+                        hash.Add("DiscordID", ctx.Member.Mention);
+                        hash.Add("Username", ctx.Member.DisplayName);
+                    }
+                    hash.Add("Allycode", allycode);
+                    hash.Add("UserLevel", 1);
+                    db.InsertRow(hash, "Users");
+                    embed.Title = "User Registered";
+                    embed.Color = new DiscordColor(0x00b300);
+                    embed.Description = added + " has been registered with ASN-121 with allycode " + allycode;
+                }
+                else
+                {
+                    embed.Title = "User Exists";
+                    embed.Color = new DiscordColor(0xFF0000);
+                    embed.Description = "This user already exists in my Databank under username: " + reader[2].ToString() + " and Allycode: " + allycode;
+                }
+                await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":thumbsup:"));
+                await ctx.RespondAsync("", embed: embed);
+            }
+            catch (Exception e)
+            {
+                var embed = new DiscordEmbedBuilder()
+                {
+                    Title = "Error",
+                    Description = "Something went wrong, please try again.",
+                    Color = new DiscordColor(0xFF0000)
+                };
+                await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":thumbsdown:"));
+                await ctx.RespondAsync("", embed: embed);
+                Console.WriteLine(e.StackTrace);
+            }
+        }
+        [Command("checkusers"), Description("register allycode to discord handle"), Aliases("cu"), Hidden]
+        public async Task checkMember(CommandContext ctx, [Description("Ally Code to check")] uint allycode)
+        {
+            var client = new MongoClient("mongodb+srv://the_only_martyr:swgohpassword@cluster0-9qh8n.mongodb.net/test?retryWrites=true&w=majority");
+            var database = client.GetDatabase("BotUsers");
+            var collection = database.GetCollection<BsonDocument>("Users");
 
-                            case "BASTILASHANDARK":
-                                if (r.Rarity >= 5) { ts.bsf.stars[r.Rarity - 5]++; }
-                                ts.bsf.Total++;
-                                if (r.Relic.CurrentTier > 1) { ts.bsf.relics[r.Relic.CurrentTier - 2]++; ts.bsf.totRel++; }
-                                if (r.Gp >= 16000)
-                                {
-                                    if (r.Gp >= 20000)
-                                        ts.bsf.gp20++;
-                                    else
-                                        ts.bsf.gp16++;
-                                }
-                                break;
-                            case "ENFYSNEST":
-                                if (r.Rarity >= 5) { ts.en.stars[r.Rarity - 5]++; }
-                                ts.en.Total++;
-                                if (r.Relic.CurrentTier > 1) { ts.en.relics[r.Relic.CurrentTier - 2]++; ts.en.totRel++; }
-                                if (r.Gp >= 16000)
-                                {
-                                    if (r.Gp >= 20000)
-                                        ts.en.gp20++;
-                                    else
-                                        ts.en.gp16++;
-                                }
-                                break;
-                            case "PADMEAMIDALA":
-                                if (r.Rarity >= 5) { ts.padme.stars[r.Rarity - 5]++; }
-                                ts.padme.Total++;
-                                if (r.Relic.CurrentTier > 1) { ts.padme.relics[r.Relic.CurrentTier - 2]++; ts.padme.totRel++; }
-                                if (r.Gp >= 16000)
-                                {
-                                    if (r.Gp >= 20000)
-                                        ts.padme.gp20++;
-                                    else
-                                        ts.padme.gp16++;
-                                }
-                                break;
-                            case "JEDIKNIGHTREVAN":
-                                if (r.Rarity >= 5) { ts.jkr.stars[r.Rarity - 5]++; }
-                                ts.jkr.Total++;
-                                if (r.Relic.CurrentTier > 1) { ts.jkr.relics[r.Relic.CurrentTier - 2]++; ts.jkr.totRel++; }
-                                if (r.Gp >= 16000)
-                                {
-                                    if (r.Gp >= 20000)
-                                        ts.jkr.gp20++;
-                                    else
-                                        ts.jkr.gp16++;
-                                }
-                                break;
-                            case "GRIEVOUS":
-                                if (r.Rarity >= 5) { ts.grievous.stars[r.Rarity - 5]++; }
-                                ts.grievous.Total++;
-                                if (r.Relic.CurrentTier > 1) { ts.grievous.relics[r.Relic.CurrentTier - 2]++; ts.grievous.totRel++; }
-                                if (r.Gp >= 16000)
-                                {
-                                    if (r.Gp >= 20000)
-                                        ts.grievous.gp20++;
-                                    else
-                                        ts.grievous.gp16++;
-                                }
-                                break;
-                            case "BOSSK":
-                                if (r.Rarity >= 5) { ts.bossk.stars[r.Rarity - 5]++; }
-                                ts.bossk.Total++;
-                                if (r.Relic.CurrentTier > 1) { ts.bossk.relics[r.Relic.CurrentTier - 2]++; ts.bossk.totRel++; }
-                                if (r.Gp >= 16000)
-                                {
-                                    if (r.Gp >= 20000)
-                                        ts.bossk.gp20++;
-                                    else
-                                        ts.bossk.gp16++;
-                                }
-                                break;
-                            case "GEONOSIANBROODALPHA":
-                                if (r.Rarity >= 5) { ts.gba.stars[r.Rarity - 5]++; }
-                                ts.gba.Total++;
-                                if (r.Relic.CurrentTier > 1) { ts.gba.relics[r.Relic.CurrentTier - 2]++; ts.gba.totRel++; }
-                                if (r.Gp >= 16000)
-                                {
-                                    if (r.Gp >= 20000)
-                                        ts.gba.gp20++;
-                                    else
-                                        ts.gba.gp16++;
-                                }
-                                break;
-                            case "DARTHREVAN":
-                                if (r.Rarity >= 5) { ts.dr.stars[r.Rarity - 5]++; }
-                                ts.dr.Total++;
-                                if (r.Relic.CurrentTier > 1) { ts.dr.relics[r.Relic.CurrentTier - 2]++; ts.dr.totRel++; }
-                                if (r.Gp >= 16000)
-                                {
-                                    if (r.Gp >= 20000)
-                                        ts.dr.gp20++;
-                                    else
-                                        ts.dr.gp16++;
-                                }
-                                break;
-                            case "DARTHMALAK":
-                                if (r.Rarity >= 5) { ts.dm.stars[r.Rarity - 5]++; }
-                                ts.dm.Total++;
-                                if (r.Relic.CurrentTier > 1) { ts.dm.relics[r.Relic.CurrentTier - 2]++; ts.dm.totRel++; }
-                                if (r.Gp >= 16000)
-                                {
-                                    if (r.Gp >= 20000)
-                                        ts.dm.gp20++;
-                                    else
-                                        ts.dm.gp16++;
-                                }
-                                break;
-                            case "CAPITALNEGOTIATOR":
-                                if (r.Rarity >= 5) { ts.nego.stars[r.Rarity - 5]++; }
-                                ts.nego.Total++;
-                                break;
-                            case "CAPITALMALEVOLENCE":
-                                if (r.Rarity >= 5) { ts.mal.stars[r.Rarity - 5]++; }
-                                ts.mal.Total++;
-                                break;
-                            case "MILLENNIUMFALCON":
-                                if (r.Rarity >= 5) { ts.mf.stars[r.Rarity - 5]++; }
-                                ts.mf.Total++;
-                                break;
-                        }
+            await ctx.RespondAsync(": Checking allycode: " + allycode);
+        }
 
-                        switch (r.Gear)
+        [Command("help"), Description("This Command List")]
+        public async Task Help(CommandContext ctx, [RemainingText][Description("")] string user)
+        {
+            DataHelper dh = new DataHelper();
+            string title = "", embeds = "", prefix = "";
+
+            var embed = new DiscordEmbedBuilder
+            {
+                Title = "ASN-121 Help",
+                Color = new DiscordColor(0xFF0000) // red
+            };
+            IReadOnlyDictionary<string, Command> commands = ctx.CommandsNext.RegisteredCommands;
+            if (user == null)
+            {
+                DiscordMessage m = ctx.Message;
+                prefix = m.Content.Replace(ctx.Command.Name, "");
+                title = "```asciidoc\n= Command List =\n";
+                embeds += title + $"Use {prefix}help commandName :: to get more information for each command\n\n";
+                String comName = "";
+                int i = 0;
+                foreach (Command c in commands.Values)
+                {
+                    if (!comName.Equals(c.Name))
+                    {
+                        comName = c.Name;
+                        i = 0;
+                    }
+                    else { i++; }
+
+                    if (i < 1)
+                    {
+                        if (!c.IsHidden)
                         {
-                            case 11:
-                                ts.G11++;
-                                break;
-                            case 12:
-                                switch (r.Equipped.Length)
+                            if (c.Name.Equals("tw") || c.Name.Equals("gs") || c.Name.Equals("register") || c.Name.Equals("checkusers") || c.Name.Equals("help"))
+                            {
+                                string aliases = "";
+                                if (c.Aliases != null)
                                 {
-                                    case 0:
-                                        ts.G12++;
-                                        break;
-                                    case 1:
-                                        ts.G121++;
-                                        break;
-                                    case 2:
-                                        ts.G122++;
-                                        break;
-                                    case 3:
-                                        ts.G123++;
-                                        break;
-                                    case 4:
-                                        ts.G124++;
-                                        break;
-                                    case 5:
-                                        ts.G125++;
-                                        break;
+                                    if (c.Aliases.Count == 1) { foreach (string s in c.Aliases) { aliases += s; } }
+                                    else
+                                    {
+                                        foreach (string s in c.Aliases) { aliases += s + ", "; }
+                                        aliases = aliases.Substring(0, aliases.LastIndexOf(','));
+                                    }
+                                    embeds += dh.createLineDocs(prefix + c.Name, c.Description + " (aliases: " + aliases + ")");
                                 }
-                                break;
-                            case 13:
-                                ts.G13++;
-                                break;
-                        }
-                        if (r.Relic != null)
-                        {
-                            if (r.Relic.CurrentTier - 2 >= 0) { ts.TotalRelics++; ts.relics[r.Relic.CurrentTier - 2]++; }
+                                else { embeds += dh.createLineDocs(prefix + c.Name, c.Description); }
+                            }
                         }
                     }
                 }
+                embeds += "```";
+                embed.Description = embeds;
             }
-            catch (Exception e) { Console.WriteLine(e.StackTrace); }
-        }
-        public uint[][] buildMemberArray(GuildParse.Roster[] r)
-        {
-
-            uint[] members1 = new uint[25], members2 = new uint[r.Length - 25];
-            uint[][] totalMembers = new uint[2][];
-            for (int i = 0; i < r.Length; i++)
+            else
             {
-                if (i < 25) { members1[i] = r[i].AllyCode; }
-                else { members2[i - 25] = r[i].AllyCode; }
+                if (dh.checkCommand(user, commands))
+                {
+                    DiscordMessage m = ctx.Message;
+                    prefix = m.Content.Substring(0, m.Content.IndexOf(ctx.Command.Name));
+                    switch (user)
+                    {
+                        case "gs":
+                        case "guildstats":
+                        case "stats":
+                            title = "```asciidoc\n= Guild Stats =\n";
+                            embeds += title + "";
+                            embeds += "Diplays data for every member of the guild of the provided allycode. \n\n" +
+                                "Usage: gs {allycode} {sort} ::  allycode is required. Sort is optional, defaults to GP Descending.\n\n" +
+                                "Sorts::  gp desc, gp asc, relics desc, relics asc, name desc and name asc\n\n" +
+                                $"Example:: {prefix}gs 729778685 relics desc";
+                            break;
+                        case "tw":
+                            title = "```asciidoc\n= TW Comparison =\n";
+                            embeds += title + "";
+                            embeds += "Displays a comparison of 2 guilds for TW. Both allycodes must be entered and represent 2 different guilds.\n\n" +
+                                $"Example:: {prefix}tw 729778685 632295218";
+                            break;
+                        case " register":
+                        case "r":
+                            title = "```asciidoc\n= Registration =\n";
+                            embeds += title + "";
+                            embeds += "Registers a user to the bot. This feature is still under development.\n\n" +
+                                $"Example:: {prefix}r 729778685 @the_only_martyr";
+                            break;
+                        case "checkusers":
+                        case "cu":
+                            title = "```asciidoc\n= Check Registration =\n";
+                            embeds += title + "";
+                            embeds += "Checks to see if a user is registered with the bot.\n\n" +
+                                $"Example:: {prefix}cu 729778685";
+                            break;
+                    }
+                    Console.WriteLine(prefix);
+                    embeds += "```";
+                    embed.Description = embeds;
+                }
+                else { embed.Description = "You must enter a valid command for me to assist you."; }
             }
-            totalMembers[0] = members1;
-            totalMembers[1] = members2;
-            Console.WriteLine("# allycodes sent: " + members1.Length + " - " + members2.Length);
-            return totalMembers;
+            await ctx.RespondAsync("", embed: embed);
         }
-        public long buildCharGP(GuildParse.Roster[] r, string toonType)
-        {
-            long GP = 0;
-            if (toonType.Equals("Char")) { foreach (GuildParse.Roster rost in r) { GP += rost.GpChar; } }
-            if (toonType.Equals("Fleet")) { foreach (GuildParse.Roster rost in r) { GP += rost.GpShip; } }
-            return GP / 1000000;
-        }
-        public string createLine(string category, string left)
-        {
-            if (category.Length > 0) { return category + addDots(10 - category.Length) + addDots(6 - left.Length) + left + addPadding(2) + "\n"; }
-            else { return category + left + addPadding(2) + "\n"; }
-        }
-        public string createHeaderLine(string category, string left, string right)
-        {
-            return category + addDots(13 - category.Length) + addDots(10 - left.Length) + left + addPadding(2) + "::" + addPadding(2) + right + "\n";
-        }
-        public string createLine(string category, string left, string right)
-        {
-            return category + addDots(13 - category.Length - left.Length) + left + "::" + right + "\n";
-        }
-        public string addPadding(int space)
-        {
-            string s = "";
-            for (int i = 0; i < space; i++) { s += " "; }
-            return s;
-        }
-        public string addDots(int space)
-        {
-            string s = "";
-            for (int i = 0; i < space; i++) { s += "."; }
-            return s;
-        }
+
         private void login()
         {
             // first, let's load our configuration file
@@ -856,35 +855,12 @@ namespace SWGOH
             using (var fs = File.OpenRead("config.json"))
             using (var sr = new StreamReader(fs, new UTF8Encoding(false)))
                 json = sr.ReadToEnd();
-
             var cfgjson = JsonConvert.DeserializeObject<ConfigJson>(json);
             UserSettings test = new UserSettings();
             test.username = cfgjson.username;
             test.password = cfgjson.password;
             helper = new swgohHelpApiHelper(test);
             if (!helper.loggedIn) { helper.login(); }
-        }
-        public PlayerParse.Player getGuildMembers(uint[][] ac)
-        {
-            dynamic obj = new ExpandoObject();
-            obj.name = 1;
-            obj.roster = 1;
-            obj.stats = 1;
-
-            string guild = helper.fetchPlayer(ac[0], null, null, obj);
-            guild = guild.Remove(guild.LastIndexOf("]")) + "," + helper.fetchPlayer(ac[1], null, null, obj).Substring(1);
-
-            guild = "{\"players\":" + guild + "}";
-            File.WriteAllText(@"C:\Users\jake\Documents\swgoh\SWGOH Prereqs\SWGOH Prereqs\players.txt", guild);
-            PlayerParse.Player player = JsonConvert.DeserializeObject<PlayerParse.Player>(guild);
-            return player;
-        }
-        public GuildParse.Guild getGuild(uint[] ac)
-        {
-            string guild = helper.fetchGuild(ac);
-            guild = "{\"guild\":" + guild + "}";
-            GuildParse.Guild gi = JsonConvert.DeserializeObject<GuildParse.Guild>(guild);
-            return gi;
         }
         private struct ConfigJson
         {

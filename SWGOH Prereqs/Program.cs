@@ -14,6 +14,7 @@ namespace SWGOH
 {
     public class Program
     {
+        //https://discordapp.com/api/oauth2/authorize?client_id=572518319991685120&permissions=68608&scope=bot
         public DiscordClient Client { get; set; }
         public InteractivityModule Interactivity { get; set; }
         public CommandsNextModule Commands { get; set; }
@@ -34,7 +35,7 @@ namespace SWGOH
                 json = await sr.ReadToEndAsync();
 
             // next, let's load the values from that file to our client's configuration
-            var cfgjson = JsonConvert.DeserializeObject<ConfigJson>(json);
+            cfgjson = JsonConvert.DeserializeObject<ConfigJson>(json);
             var cfg = new DiscordConfiguration
             {
                 Token = cfgjson.Token,
@@ -76,7 +77,9 @@ namespace SWGOH
                 EnableDms = true,
 
                 // enable mentioning the bot as a command prefix
-                EnableMentionPrefix = true
+                EnableMentionPrefix = true,
+
+                EnableDefaultHelp = false
             };
 
             // and hook them up
@@ -89,20 +92,25 @@ namespace SWGOH
             // up next, let's register our commands
             this.Commands.RegisterCommands<Commands>();
 
+
+
+            //await this.Client.UpdateStatusAsync(dg);
+
             // finally, let's connect and log in
             await this.Client.ConnectAsync();
 
             // when the bot is running, try doing <prefix>help to see the list of registered commands, and <prefix>help <command> to see help about specific command.
-
             // and this is to prevent premature quitting
             await Task.Delay(-1);
+
         }
 
         private Task Client_Ready(ReadyEventArgs e)
         {
             // let's log the fact that this event occured
             e.Client.DebugLogger.LogMessage(LogLevel.Info, "SWGOHBot", "Client is ready to process events.", DateTime.Now);
-
+            DiscordGame dg = new DiscordGame(cfgjson.CommandPrefix + "help");
+            this.Client.UpdateStatusAsync(dg);
             // since this method is not async, let's return a completed task, so that no additional work is done
             return Task.CompletedTask;
         }
@@ -111,6 +119,7 @@ namespace SWGOH
         {
             // let's log the name of the guild that was just sent to our client
             e.Client.DebugLogger.LogMessage(LogLevel.Info, "SWGOHBot", $"Guild available: {e.Guild.Name}", DateTime.Now);
+
 
             // since this method is not async, let's return a completed task, so that no additional work is done
             return Task.CompletedTask;
