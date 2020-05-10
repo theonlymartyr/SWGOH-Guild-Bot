@@ -1,6 +1,12 @@
-# SWGOH-Legendary-Hero-Prerequisite-Checker
+# SWGOH General Use Bot
 
-This bot is a side project that is intended to give a player insight into whether or not they are able to get a "Legendary" or "Hero's Journey Character in SWGOH.
+This bot is a side project that is intended to be useful for players and guilds alike.
+
+Current Features:
+go [allycode]    gets the basic overview of the guild associated with the provided allycode
+gs [allycode]    gets guild stats for the provided allycode with individual member data
+gac [allycode1] [allycode2] provides a comparison for the GAC matchup of the 2 provided allycodes
+tw [allycode1] [allycode2] provides a comparison for the TW matchup of the guilds associated with the 2 provided allycodes
 
 1. This bot uses the [SWGOH.Help API](https://api.swgoh.help/), you will need to sign up to get an api username and password to put in the config file
 
@@ -9,13 +15,3 @@ This bot is a side project that is intended to give a player insight into whethe
 3. For Discord Platform I used [This Example](https://github.com/DSharpPlus/Example-Bots/tree/master/DSPlus.Examples.CSharp.Ex03) by [Emzi0767](https://github.com/Emzi0767) to get started.
 
 4. You will need to create a Discord app and get a token to put in the config.json to run this as well: [Here](https://github.com/reactiflux/discord-irc/wiki/Creating-a-discord-bot-&-getting-a-token) is a good walkthrough on that
-
-It will pull a player's roster and check against star requirements for the event. If the player has the character, it will show character details instead.
-
-Possible future plans to add the ability to give gear level recommendations on an individual use. This could be tricky.
-
-Future plans to add the ability to see how the entire guild sits in relation to the event requirements, showing:
-    
-	--If guildmates have the given character, show star level and power level
-    --If guildmates do not have the character, display needed character stats (this may be difficult for characters like padme where there is a larger faction able to be used)
-    
