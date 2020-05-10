@@ -260,8 +260,10 @@ namespace SWGOH
                 }
             }
             GP = String.Format(CultureInfo.InvariantCulture, "{0:#,##,M}", (double)p.Stats[0].Value);
-            toonGP = p.Stats[1].Value.ToString("#,##,M", CultureInfo.InvariantCulture);
-            shipGP = p.Stats[2].Value.ToString("#,##,M", CultureInfo.InvariantCulture);
+            if (p.Stats[1].Value >= 1000000) { toonGP = p.Stats[1].Value.ToString("#,###,M", CultureInfo.InvariantCulture); }
+            else { toonGP = p.Stats[1].Value.ToString("#,###,K", CultureInfo.InvariantCulture); }
+            if (p.Stats[2].Value >= 1000000) { shipGP = p.Stats[2].Value.ToString("#,###,M", CultureInfo.InvariantCulture); }
+            else { shipGP = p.Stats[2].Value.ToString("#,###,k", CultureInfo.InvariantCulture); }
             relic7 = rLevel[7];
             relic4 = rLevel[7] + rLevel[6] + rLevel[5] + rLevel[4];
         }

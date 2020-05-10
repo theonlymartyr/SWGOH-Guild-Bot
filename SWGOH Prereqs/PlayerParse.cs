@@ -197,6 +197,18 @@ namespace PlayerParse
 
         [JsonProperty("relic")]
         public Relic Relic { get; set; }
+
+        [JsonProperty("stats", NullValueHandling = NullValueHandling.Ignore)]
+        public Stats Stats { get; set; }
+    }
+
+    public partial class Stats
+    {
+        [JsonProperty("final")]
+        public Dictionary<string, double> Final { get; set; }
+
+        [JsonProperty("mods")]
+        public Dictionary<string, double> Mods { get; set; }
     }
 
     public partial class Crew

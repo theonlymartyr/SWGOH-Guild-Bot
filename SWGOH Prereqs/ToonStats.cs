@@ -26,13 +26,15 @@ namespace SWGOH_Prereqs
         public DR dr;
         public DM dm;
         public GAS gas;
+        public Rey rey;
+        public SLKR slkr;
         #endregion
-        public ToonStats() { ht = new HT(); mf = new MF(); nego = new Nego(); traya = new Traya(); en = new EN(); padme = new Padme(); jkr = new JKR(); grievous = new Grievous(); bsf = new BSF(); bossk = new Bossk(); gba = new GBA(); mal = new Malevolence(); dr = new DR(); dm = new DM(); gas = new GAS(); }
+        public ToonStats() { ht = new HT(); mf = new MF(); nego = new Nego(); traya = new Traya(); en = new EN(); padme = new Padme(); jkr = new JKR(); grievous = new Grievous(); bsf = new BSF(); bossk = new Bossk(); gba = new GBA(); mal = new Malevolence(); dr = new DR(); dm = new DM(); gas = new GAS(); rey = new Rey(); slkr = new SLKR(); }
+        #region ToonObjects
         public partial class HT
         {
             public int Total;
             public int[] stars = new int[3];
-
         }
         public partial class MF
         {
@@ -64,6 +66,22 @@ namespace SWGOH_Prereqs
             public int[] relics = new int[8];
             public int[] stars = new int[3];
             public int z, zz, zzz, zzzz;
+        }
+        public partial class Rey
+        {
+            public int Total, totRel, gp16, gp20;
+            public int[] gear = new int[3];
+            public int[] relics = new int[8];
+            public int[] stars = new int[3];
+            public int z, zz, zzz, zzzz, zzzzz, zzzzzz;
+        }
+        public partial class SLKR
+        {
+            public int Total, totRel, gp16, gp20;
+            public int[] gear = new int[3];
+            public int[] relics = new int[8];
+            public int[] stars = new int[3];
+            public int z, zz, zzz, zzzz, zzzzz, zzzzzz;
         }
         public partial class EN
         {
@@ -136,5 +154,6 @@ namespace SWGOH_Prereqs
             public int[] stars = new int[3];
             public int z, zz;
         }
+        #endregion
     }
 }

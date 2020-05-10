@@ -14,15 +14,25 @@ namespace SWGOH_Prereqs
         public int zz { get; set; }
         public int zzz { get; set; }
         public int zzzz { get; set; }
+        public int zzzzz { get; set; }
+        public int zzzzzz { get; set; }
         public int[] gear = new int[3];
         public int[] stars = new int[3];
         public int[] relics = new int[8];
         public string name { get; set; }
         public string id { get; set; }
         public int maxZetas { get; set; }
+        public int[] numZetas;
+        public bool ship = false;
 
-        public Toons()
+        public Toons(String igname, int maxZetas)
         {
+            id = igname;
+            Total = 0;
+            totRel = 0;
+            gp16 = 0;
+            gp20 = 0;
+            numZetas = new int[maxZetas];
         }
     }
 }

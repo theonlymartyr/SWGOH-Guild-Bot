@@ -130,7 +130,7 @@ namespace SWGOH
                 request.Method = "POST";
                 request.ContentType = "application/json";
                 request.Headers.Add("Authorization", "Bearer " + token + "");
-
+                request.Timeout = 300000;
                 string json = JsonConvert.SerializeObject(param);
 
                 byte[] byteArray = Encoding.UTF8.GetBytes(param.ToString());
@@ -141,7 +141,6 @@ namespace SWGOH
                 }
 
                 WebResponse response = request.GetResponse();
-                //Console.WriteLine(((HttpWebResponse)response).StatusDescription);
                 var dataStream = response.GetResponseStream();
                 StreamReader reader = new StreamReader(dataStream);
                 var apiResponse = reader.ReadToEnd();
@@ -153,6 +152,7 @@ namespace SWGOH
             }
             catch (Exception e)
             {
+                Console.WriteLine(e.HResult + ":" + e.Message);
                 throw e;
             }
         }
@@ -162,7 +162,7 @@ namespace SWGOH
             dynamic obj = new ExpandoObject();
             obj.allycodes = allycodes;
             if (language != null)
-                obj.language = language;
+                obj.language = "ENG_US";
             if (enums.HasValue)
                 obj.enums = enums;
             if (project != null)
@@ -282,5 +282,37 @@ namespace SWGOH
 
             return response;
         }
+
+        public string getStats(string player)
+        {
+            string baseURL = "https://swgoh-stat-calc.glitch.me/api?flags=calcGP,gameStyle";
+            try
+            {
+                //Console.WriteLine("Fetching Zetas");
+                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(baseURL);
+                request.Method = "POST";
+                request.ContentType = "application/json";
+                using (StreamWriter writer = new StreamWriter(request.GetRequestStream()))
+                {
+                    writer.Write(player);
+                }
+
+                WebResponse response = request.GetResponse();
+                Console.WriteLine(((HttpWebResponse)response).StatusDescription);
+                var dataStream = response.GetResponseStream();
+                StreamReader reader = new StreamReader(dataStream);
+                var apiResponse = reader.ReadToEnd();
+                reader.Close();
+                dataStream.Close();
+                response.Close();
+
+                return apiResponse;
+            }
+            catch (Exception e)
+            {
+                throw e;
+            }
+        }
+
     }
 }
