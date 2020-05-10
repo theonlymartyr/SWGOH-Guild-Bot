@@ -3,10 +3,10 @@
 This bot is a side project that is intended to be useful for players and guilds alike.
 
 Current Features:
-go [allycode]    gets the basic overview of the guild associated with the provided allycode
-gs [allycode]    gets guild stats for the provided allycode with individual member data
-gac [allycode1] [allycode2] provides a comparison for the GAC matchup of the 2 provided allycodes
-tw [allycode1] [allycode2] provides a comparison for the TW matchup of the guilds associated with the 2 provided allycodes
+1. go [allycode]    gets the basic overview of the guild associated with the provided allycode
+2. gs [allycode]    gets guild stats for the provided allycode with individual member data
+3. gac [allycode1] [allycode2] provides a comparison for the GAC matchup of the 2 provided allycodes
+4. tw [allycode1] [allycode2] provides a comparison for the TW matchup of the guilds associated with the 2 provided allycodes
 
 1. This bot uses the [SWGOH.Help API](https://api.swgoh.help/), you will need to sign up to get an api username and password to put in the config file
 
