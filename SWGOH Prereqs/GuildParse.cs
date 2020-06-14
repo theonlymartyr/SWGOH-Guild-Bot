@@ -25,7 +25,7 @@ namespace GuildParse
 
         [JsonProperty("members")]
         public long Members { get; set; }
-
+        /*
         [JsonProperty("status")]
         public long Status { get; set; }
 
@@ -40,12 +40,10 @@ namespace GuildParse
 
         [JsonProperty("message")]
         public string Message { get; set; }
-
+        [JsonProperty("raid")]
+        public Raid Raid { get; set; }*/
         [JsonProperty("gp")]
         public long Gp { get; set; }
-
-        [JsonProperty("raid")]
-        public Raid Raid { get; set; }
 
         [JsonProperty("roster")]
         public Roster[] Roster { get; set; }
@@ -54,31 +52,30 @@ namespace GuildParse
         public long Updated { get; set; }
     }
 
-    public partial class Raid
-    {
-        [JsonProperty("rancor")]
-        public string Rancor { get; set; }
+    /* public partial class Raid
+     {
+         [JsonProperty("rancor")]
+         public string Rancor { get; set; }
 
-        [JsonProperty("aat")]
-        public string Aat { get; set; }
+         [JsonProperty("aat")]
+         public string Aat { get; set; }
 
-        [JsonProperty("sith_raid")]
-        public string SithRaid { get; set; }
-    }
+         [JsonProperty("sith_raid")]
+         public string SithRaid { get; set; }
+     }*/
 
     public partial class Roster
     {
         [JsonProperty("id")]
         public string Id { get; set; }
 
-        [JsonProperty("guildMemberLevel")]
-        public long GuildMemberLevel { get; set; }
+        /* [JsonProperty("guildMemberLevel")]
+         public long GuildMemberLevel { get; set; }
+          [JsonProperty("level")]
+         public long Level { get; set; }*/
 
         [JsonProperty("name")]
         public string Name { get; set; }
-
-        [JsonProperty("level")]
-        public long Level { get; set; }
 
         [JsonProperty("allyCode")]
         public uint AllyCode { get; set; }
