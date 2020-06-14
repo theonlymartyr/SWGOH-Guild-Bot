@@ -1,12 +1,16 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using DSharpPlus;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Exceptions;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
+using DSharpPlus.Exceptions;
 using DSharpPlus.Interactivity;
 using Newtonsoft.Json;
 
@@ -98,18 +102,27 @@ namespace SWGOH
 
             // finally, let's connect and log in
             await this.Client.ConnectAsync();
+            //test();
+            while (true)
+            {
+                checkForReminders();
+                //Check every minute for assigned tasks
+                Thread.Sleep(60000);
+            }
 
             // when the bot is running, try doing <prefix>help to see the list of registered commands, and <prefix>help <command> to see help about specific command.
             // and this is to prevent premature quitting
             await Task.Delay(-1);
-
         }
 
         private Task Client_Ready(ReadyEventArgs e)
         {
             // let's log the fact that this event occured
+            Assembly.GetExecutingAssembly().GetName().Version.ToString();
+
             e.Client.DebugLogger.LogMessage(LogLevel.Info, "SWGOHBot", "Client is ready to process events.", DateTime.Now);
-            DiscordGame dg = new DiscordGame(cfgjson.CommandPrefix + "help");
+            e.Client.DebugLogger.LogMessage(LogLevel.Info, "SWGOHBot", $"Running Client Version: {Assembly.GetExecutingAssembly().GetName().Version.ToString()}", DateTime.Now);
+            DiscordGame dg = new DiscordGame(cfgjson.CommandPrefix + "help  |  version:" + Assembly.GetExecutingAssembly().GetName().Version.ToString());
             this.Client.UpdateStatusAsync(dg);
             // since this method is not async, let's return a completed task, so that no additional work is done
             return Task.CompletedTask;
@@ -165,6 +178,18 @@ namespace SWGOH
                 };
                 await e.Context.RespondAsync("", embed: embed);
             }
+            if (e.Exception is NotFoundException nfe)
+            {
+                String s = $":scream:The command must be ran with either 2 arguements or a Discord user.";
+                // let's wrap the response into an embed
+                var embed = new DiscordEmbedBuilder
+                {
+                    Title = "Uh Oh! Looks like there was a problem!",
+                    Description = s,//$"{emoji} I need to know who you want me to look for. Example: thrawn",
+                    Color = new DiscordColor(0xFF0000) // red
+                };
+                await e.Context.RespondAsync("", embed: embed);
+            }
 
             if (e.Exception is ArgumentException)
             {
@@ -173,29 +198,15 @@ namespace SWGOH
 
                 if (!AllyCode.IsValid(Convert.ToUInt32(e.Exception.Data["allycode"])))
                 {
-                    s = $":scream:The ally code given is invalid, please try again with a valid ally code.";
+                    s = $":scream:The command must be ran with either 2 arguements or a Discord user.";
                 }
                 else { }
                 var emoji = DiscordEmoji.FromName(e.Context.Client, ":no_entry:");
 
-                if (e.Exception.Data.Keys.Count > 0)
-                {
-                    for (int i = 0; i < e.Exception.Data.Keys.Count; i++)
-                    {
-                        if (e.Exception.Data[i] == null)
-                        {
-                            s += "I need a value for " + e.Exception.Data[i];
-                        }
-                    }
-                }
-                else
-                {
-                    //s = $":scream:You haven't told me anything. I need to know who I'm looking for and for whom\nTry {cfgjson.CommandPrefix}reqs <character> <ally code>";
-                }
                 // let's wrap the response into an embed
                 var embed = new DiscordEmbedBuilder
                 {
-                    Title = "Jar Jar",
+                    Title = "Uh Oh! Looks like there was a problem!",
                     Description = s,//$"{emoji} I need to know who you want me to look for. Example: thrawn",
                     Color = new DiscordColor(0xFF0000) // red
                 };
@@ -211,6 +222,17 @@ namespace SWGOH
 
             // next, let's load the values from that file to our client's configuration
             cfgjson = JsonConvert.DeserializeObject<ConfigJson>(json);
+        }
+        public void test()
+        {
+            SWGOH_Prereqs.CharacterStrings d = new SWGOH_Prereqs.CharacterStrings();
+            String toons = JsonConvert.SerializeObject(d.toonsList);
+
+            File.WriteAllText($@"C:\Users\jake\Documents\swgoh\SWGOH Prereqs\SWGOH Prereqs\Data\toons.txt", toons.ToString());
+        }
+        public void checkForReminders()
+        {
+            Console.WriteLine("This is only a test");
         }
     }
 

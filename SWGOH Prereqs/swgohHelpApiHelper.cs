@@ -55,9 +55,8 @@ namespace SWGOH
             battles = url + "/swgoh/battles/";
         }
 
-        public void login()
+        public bool login()
         {
-
             try
             {
                 //If we don't have a token, try to load them from the file
@@ -88,9 +87,11 @@ namespace SWGOH
                     token = loginResponseObject.access_token;
                     writeValues(token);
                     loggedIn = true;
+                    return loggedIn;
                 }
+                return loggedIn;
             }
-            catch (Exception e) { throw e; }
+            catch (Exception e) { Console.WriteLine(e.Message + "\n\n" + e.StackTrace); return loggedIn; }
         }
         public void checkToken()
         {
@@ -126,6 +127,7 @@ namespace SWGOH
         {
             try
             {
+                Console.WriteLine(url);
                 HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
                 request.Method = "POST";
                 request.ContentType = "application/json";

@@ -11,5 +11,6 @@ namespace SWGOH_Prereqs
         public int[] relics = new int[8];
         public int[] speedMods = new int[4];
         public int sixStarMods = 0;
+        public List<string> ignoreList;
     }
 }

@@ -27,52 +27,55 @@ namespace PlayerParse
         [JsonProperty("allyCode")]
         public long AllyCode { get; set; }
 
-        [JsonProperty("titles")]
-        public Portraits Titles { get; set; }
-
-        [JsonProperty("guildRefId")]
-        public string GuildRefId { get; set; }
-
-        [JsonProperty("guildName")]
-        public string GuildName { get; set; }
-
-        [JsonProperty("guildBannerColor")]
-        public string GuildBannerColor { get; set; }
-
-        [JsonProperty("guildBannerLogo")]
-        public string GuildBannerLogo { get; set; }
-
-        [JsonProperty("guildTypeId")]
-        public string GuildTypeId { get; set; }
-
         [JsonProperty("stats")]
         public Stat[] Stats { get; set; }
 
         [JsonProperty("roster")]
         public Roster[] Roster { get; set; }
 
-        [JsonProperty("arena")]
-        public Arena Arena { get; set; }
-
         [JsonProperty("updated")]
         public long Updated { get; set; }
-
-        [JsonProperty("lastActivity")]
-        public long LastActivity { get; set; }
-
-        [JsonProperty("poUTCOffsetMinutes")]
-        public long PoUtcOffsetMinutes { get; set; }
-
-        [JsonProperty("portraits")]
-        public Portraits Portraits { get; set; }
 
         [JsonProperty("grandArena")]
         public GrandArena[] GrandArena { get; set; }
 
         [JsonProperty("grandArenaLifeTime")]
         public long GrandArenaLifeTime { get; set; }
+
+        [JsonProperty("guildName")]
+        public string GuildName { get; set; }
+        [JsonProperty("guildRefId")]
+        public string GuildRefId { get; set; }
+        /* [JsonProperty("titles")]
+         public Portraits Titles { get; set; }
+
+         
+
+         
+
+         [JsonProperty("guildBannerColor")]
+         public string GuildBannerColor { get; set; }
+
+         [JsonProperty("guildBannerLogo")]
+         public string GuildBannerLogo { get; set; }
+
+         [JsonProperty("guildTypeId")]
+         public string GuildTypeId { get; set; }
+
+         [JsonProperty("portraits")]
+         public Portraits Portraits { get; set; }
+         [JsonProperty("arena")]
+         public Arena Arena { get; set; }
+         [JsonProperty("lastActivity")]
+         public long LastActivity { get; set; }
+
+         [JsonProperty("poUTCOffsetMinutes")]
+         public long PoUtcOffsetMinutes { get; set; }
+         */
     }
 
+    #region arenas
+    /*
     public partial class Arena
     {
         [JsonProperty("char")]
@@ -90,8 +93,7 @@ namespace PlayerParse
         [JsonProperty("squad")]
         public Squad[] Squad { get; set; }
     }
-
-    public partial class Squad
+   public partial class Squad
     {
         [JsonProperty("id")]
         public string Id { get; set; }
@@ -102,7 +104,8 @@ namespace PlayerParse
         [JsonProperty("squadUnitType")]
         public long SquadUnitType { get; set; }
     }
-
+    */
+    #endregion
     public partial class GrandArena
     {
         [JsonProperty("seasonId")]
@@ -128,7 +131,7 @@ namespace PlayerParse
 
         [JsonProperty("division")]
         public long Division { get; set; }
-
+        /*
         [JsonProperty("joinTime")]
         public long JoinTime { get; set; }
 
@@ -137,20 +140,21 @@ namespace PlayerParse
 
         [JsonProperty("remove")]
         public bool Remove { get; set; }
-
+        */
         [JsonProperty("rank")]
         public long Rank { get; set; }
     }
+    #region portraits
+    /* public partial class Portraits
+      {
+          [JsonProperty("selected")]
+          public string Selected { get; set; }
 
-    public partial class Portraits
-    {
-        [JsonProperty("selected")]
-        public string Selected { get; set; }
-
-        [JsonProperty("unlocked")]
-        public string[] Unlocked { get; set; }
-    }
-
+          [JsonProperty("unlocked")]
+          public string[] Unlocked { get; set; }
+      }
+      */
+    #endregion
     public partial class Roster
     {
         [JsonProperty("id")]
@@ -159,17 +163,11 @@ namespace PlayerParse
         [JsonProperty("defId")]
         public string DefId { get; set; }
 
-        [JsonProperty("nameKey")]
-        public string NameKey { get; set; }
-
         [JsonProperty("rarity")]
         public long Rarity { get; set; }
 
         [JsonProperty("level")]
         public long Level { get; set; }
-
-        [JsonProperty("xp")]
-        public long Xp { get; set; }
 
         [JsonProperty("gear")]
         public long Gear { get; set; }
@@ -186,9 +184,6 @@ namespace PlayerParse
         [JsonProperty("mods")]
         public Mod[] Mods { get; set; }
 
-        [JsonProperty("crew")]
-        public Crew[] Crew { get; set; }
-
         [JsonProperty("gp")]
         public long Gp { get; set; }
 
@@ -200,6 +195,12 @@ namespace PlayerParse
 
         [JsonProperty("stats", NullValueHandling = NullValueHandling.Ignore)]
         public Stats Stats { get; set; }
+        /*[JsonProperty("xp")]
+        public long Xp { get; set; }
+        [JsonProperty("crew")]
+        public Crew[] Crew { get; set; }
+        [JsonProperty("nameKey")]
+        public string NameKey { get; set; }*/
     }
 
     public partial class Stats
@@ -210,7 +211,8 @@ namespace PlayerParse
         [JsonProperty("mods")]
         public Dictionary<string, double> Mods { get; set; }
     }
-
+    #region crew
+    /*
     public partial class Crew
     {
         [JsonProperty("unitId")]
@@ -231,7 +233,7 @@ namespace PlayerParse
         [JsonProperty("cp")]
         public double Cp { get; set; }
     }
-
+   
     public partial class SkillReferenceList
     {
         [JsonProperty("skillId")]
@@ -246,7 +248,8 @@ namespace PlayerParse
         [JsonProperty("requiredRelicTier")]
         public long RequiredRelicTier { get; set; }
     }
-
+     */
+    #endregion
     public partial class Equipped
     {
         [JsonProperty("equipmentId")]
