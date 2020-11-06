@@ -10,6 +10,7 @@ namespace GuildParse
     {
         [JsonProperty("guild")]
         public GuildMember[] guild { get; set; }
+
     }
 
     public partial class GuildMember
@@ -92,7 +93,17 @@ namespace GuildParse
         [JsonProperty("updated")]
         public long Updated { get; set; }
     }
+    public partial class Error
+    {
+        [JsonProperty("error")]
+        public string ErrorError { get; set; }
 
+        [JsonProperty("error_description")]
+        public string ErrorDescription { get; set; }
+
+        [JsonProperty("code")]
+        public long Code { get; set; }
+    }
     public partial class Guild
     {
         public static Guild FromJson(string json) => JsonConvert.DeserializeObject<Guild>(json, Converter.Settings);

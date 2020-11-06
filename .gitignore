@@ -31,3 +31,34 @@
 /.vs/SWGOH Prereqs/v15/Server/sqlite3/db.lock
 /.vs/SWGOH Prereqs/v15/.suo
 /.vs/config/applicationhost.config
+/SWGOH Prereqs/obj/Release/netcoreapp2.1
+/SWGOH Prereqs/Properties/PublishProfiles
+/SWGOH Prereqs/obj/netcoreapp2.1/win-x64/host
+/SWGOH Prereqs/obj/publish/win-x64
+/SWGOH Prereqs/SWGOH GuildBot.csproj.user
+/SWGOH Prereqs/bin/Release/netcoreapp2.1
+/SWGOH Prereqs/Logs
+/SWGOH Prereqs/Properties
+/SWGOH Prereqs/guildstats6.json
+/SWGOH Prereqs/guildstats5.json
+/SWGOH Prereqs/guildstats4.json
+/SWGOH Prereqs/guildstats3.json
+/SWGOH Prereqs/guildstats2.json
+/SWGOH Prereqs/guildstats1.json
+/SWGOH Prereqs/guildstats0.json
+/SWGOH Prereqs/guildstats.json
+/SWGOH Prereqs/test.json
+/SWGOH Prereqs/SWGOH GuildBot.xml
+/SWGOH Prereqs/swgoh bot test.txt
+/SWGOH Prereqs/spacedonkey.txt
+/SWGOH Prereqs/players.json
+/SWGOH Prereqs/database.cs
+/SWGOH Prereqs/Data/defID.txt
+*.txt
+/SWGOH Prereqs/Users.cs
+/SWGOH Prereqs/bin/Debug/netcoreapp2.0
+/SWGOH Prereqs/obj/Debug/netcoreapp2.0
+/SWGOH Prereqs/obj/publish/linux-arm
+/SWGOH Prereqs/obj/netcoreapp2.1/linux-arm/host
+*.cache
+*.json

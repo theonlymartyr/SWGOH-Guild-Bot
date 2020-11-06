@@ -12,5 +12,8 @@ namespace SWGOH_Prereqs
         public int[] speedMods = new int[4];
         public int sixStarMods = 0;
         public List<string> ignoreList;
+        public int gpIgnored { get; set; }
+        public double gpIgnoredToon { get; set; }
+        public double gpIgnoredFleet { get; set; }
     }
 }

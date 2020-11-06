@@ -6,16 +6,31 @@
     <RootNamespace>SWGOH_Prereqs</RootNamespace>
     <ApplicationIcon>death star.ico</ApplicationIcon>
     <StartupObject>SWGOH.Program</StartupObject>
-    <Version>2.4.2</Version>
+    <Version>2.6.1.2</Version>
     <Authors>the_only_martyr</Authors>
     <Company />
-    <AssemblyVersion>2.4.2.0</AssemblyVersion>
-    <FileVersion>2.4.2.0</FileVersion>
+    <AssemblyVersion>2.6.1.2</AssemblyVersion>
+    <FileVersion>2.6.1.2</FileVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DocumentationFile>C:\Users\jake\Documents\swgoh\SWGOH Prereqs\SWGOH Prereqs\SWGOH GuildBot.xml</DocumentationFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Data\**" />
+    <Compile Remove="Logs\**" />
+    <Compile Remove="Pi version\**" />
+    <Compile Remove="Properties\PublishProfiles\**" />
+    <EmbeddedResource Remove="Data\**" />
+    <EmbeddedResource Remove="Logs\**" />
+    <EmbeddedResource Remove="Pi version\**" />
+    <EmbeddedResource Remove="Properties\PublishProfiles\**" />
+    <None Remove="Data\**" />
+    <None Remove="Logs\**" />
+    <None Remove="Pi version\**" />
+    <None Remove="Properties\PublishProfiles\**" />
+  </ItemGroup>
 
   <ItemGroup>
     <None Remove="players.txt" />
@@ -27,6 +42,7 @@
     <PackageReference Include="DSharpPlus" Version="3.2.3" />
     <PackageReference Include="DSharpPlus.CommandsNext" Version="3.2.3" />
     <PackageReference Include="DSharpPlus.Interactivity" Version="3.2.3" />
+    <PackageReference Include="Google.Apis.Sheets.V4" Version="1.49.0.2069" />
     <PackageReference Include="MongoDB.Driver" Version="2.10.1" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.0" />
   </ItemGroup>
