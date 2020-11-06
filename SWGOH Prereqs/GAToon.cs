@@ -17,6 +17,7 @@ namespace SWGOH_Prereqs
         public int gearEquipped { get; set; }
         public int Zetas { get; set; }
         public int relic { get; set; }
+        public bool isShip { get; set; }
 
         public GAToon(String iGName)
         {
@@ -31,6 +32,7 @@ namespace SWGOH_Prereqs
             gearEquipped = 0;
             Zetas = 0;
             relic = 0;
+            isShip = false;
         }
     }
 }

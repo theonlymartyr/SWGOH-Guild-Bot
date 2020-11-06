@@ -274,7 +274,13 @@ namespace SWGOH_Prereqs
                 { "THEMANDALORIAN","Mando"},
                 { "GREEFKARGA","Greef Karga"},
                 { "CARADUNE","Cara Dune"},
-                { "TIEBOMBERIMPERIAL","Tie Bomber"}
+                { "TIEBOMBERIMPERIAL","Tie Bomber"},
+            {"JEDIKNIGHTLUKE", "JKL" },
+            { "MONMOTHMA","Mon Mothma"  },
+            {"C3POCHEWBACCA", "Threepio & Chewie" },
+            {"GRANDMASTERLUKE", "GL Luke" },
+            {"SITHPALPATINE", "GL Palp" },
+            {"ADMIRALPIETT", "Admiral Piett"}
         };
         public CharacterDefID() { }
     }
@@ -457,6 +463,22 @@ namespace SWGOH_Prereqs
                 { "cara","CARADUNE"},
                 { "cara dune","CARADUNE"},
                 { "Tie Bomber","TIEBOMBERIMPERIAL"},
+            {"JKL","JEDIKNIGHTLUKE"  },
+            {"Jedi Knight Luke","JEDIKNIGHTLUKE"  },
+            {"Threepio & Chewie","C3POCHEWBACCA"  },
+            {"Chewpio","C3POCHEWBACCA"  },
+            { "Mon Mothma","MONMOTHMA"  },
+            { "Mothma","MONMOTHMA"  },
+            {"GL Luke","GRANDMASTERLUKE"},
+            {"JML","GRANDMASTERLUKE"},
+            {"GML","GRANDMASTERLUKE"},
+            {"Jamal","GRANDMASTERLUKE"},
+            {"GL Palp","SITHPALPATINE"  },
+            {"SEEP","SITHPALPATINE"  },
+            {"SEE","SITHPALPATINE"  },
+            {"Sith Eternal","SITHPALPATINE"  },
+            {"Admiral Piett","ADMIRALPIETT" },
+            {"Piett","ADMIRALPIETT" }
         };
         public CharacterStrings() { }
     }

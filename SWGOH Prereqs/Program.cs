@@ -1,7 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
+using System.Net;
+using System.Net.Security;
 using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,6 +21,31 @@ namespace SWGOH
 {
     public class Program
     {
+        private static bool ServerCertificateValidationCallback(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
+        {
+            bool isOk = true;
+
+            if (sslPolicyErrors != SslPolicyErrors.None)
+            {
+                foreach (X509ChainStatus cs in chain.ChainStatus)
+                {
+                    if (cs.Status != X509ChainStatusFlags.RevocationStatusUnknown)
+                    {
+                        chain.ChainPolicy.RevocationFlag = X509RevocationFlag.EntireChain;
+                        chain.ChainPolicy.RevocationMode = X509RevocationMode.Online;
+                        chain.ChainPolicy.UrlRetrievalTimeout = new TimeSpan(0, 1, 0);
+                        chain.ChainPolicy.VerificationFlags = X509VerificationFlags.AllFlags;
+                        bool chainIsValid = chain.Build((X509Certificate2)certificate);
+                        if (!chainIsValid)
+                        {
+                            isOk = false;
+                        }
+                    }
+                }
+            }
+
+            return isOk;
+        }
         //https://discordapp.com/api/oauth2/authorize?client_id=572518319991685120&permissions=68608&scope=bot
         public DiscordClient Client { get; set; }
         public InteractivityModule Interactivity { get; set; }
@@ -32,6 +60,7 @@ namespace SWGOH
 
         public async Task RunBotAsync()
         {
+            ServicePointManager.ServerCertificateValidationCallback = (s, cert, chain, ssl) => true;
             // first, let's load our configuration file
             var json = "";
             using (var fs = File.OpenRead("config.json"))
@@ -49,6 +78,8 @@ namespace SWGOH
                 LogLevel = LogLevel.Debug,
                 UseInternalLogHandler = true
             };
+
+
 
             // then we want to instantiate our client
             this.Client = new DiscordClient(cfg);
@@ -114,6 +145,8 @@ namespace SWGOH
             // and this is to prevent premature quitting
             await Task.Delay(-1);
         }
+
+
 
         private Task Client_Ready(ReadyEventArgs e)
         {
@@ -228,7 +261,7 @@ namespace SWGOH
             SWGOH_Prereqs.CharacterStrings d = new SWGOH_Prereqs.CharacterStrings();
             String toons = JsonConvert.SerializeObject(d.toonsList);
 
-            File.WriteAllText($@"C:\Users\jake\Documents\swgoh\SWGOH Prereqs\SWGOH Prereqs\Data\toons.txt", toons.ToString());
+            File.WriteAllText((RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? "" : $@"C:\Users\jake\Documents\swgoh\SWGOH Prereqs\SWGOH Prereqs") + @"\Data\toons.txt", toons.ToString());
         }
         public void checkForReminders()
         {

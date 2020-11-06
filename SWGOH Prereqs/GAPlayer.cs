@@ -7,6 +7,7 @@ namespace SWGOH_Prereqs
     class GAPlayer
     {
         public List<GAToon> toonsOwned = new List<GAToon>();
+        public ToonCompare toonCompare;
         public long AllyCode { get; set; }
         public int Zetas { get; set; }
         public int totalRelics { get; set; }

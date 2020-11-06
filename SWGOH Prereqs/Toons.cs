@@ -35,4 +35,54 @@ namespace SWGOH_Prereqs
             numZetas = new int[maxZetas];
         }
     }
+    class ToonCompare
+    {
+        public int level { get; set; }
+        public int rarity { get; set; }
+        public int zetas { get; set; }
+        public int relicTier { get; set; }
+        public bool ship = false;
+
+
+        public int modHealth { get; set; }
+        public int modSpeed { get; set; }
+        public int modPhysicalDamage { get; set; }
+        public int modSpecialDamage { get; set; }
+        public double modArmor { get; set; }
+        public double modResistance { get; set; }
+        public double modCritDamage { get; set; }
+        public double modPotency { get; set; }
+        public double modTenacity { get; set; }
+        public double modPhysicalCriticalChance { get; set; }
+        public double modSpecialCriticalChance { get; set; }
+        public int modProtection { get; set; }
+        public double modSpecCritAvoid { get; set; }
+        public double modPhysCritAvoid { get; set; }
+
+        public int finalHealth { get; set; }
+        public int finalStrength { get; set; }
+        public int finalAgility { get; set; }
+        public int finalTactics { get; set; }
+        public int finalSpeed { get; set; }
+        public int finalPhysDam { get; set; }
+        public int finalSpecDam { get; set; }
+        public double finalArmor { get; set; }
+        public double finalResistance { get; set; }
+        public int finalArmorPen { get; set; }
+        public int finalResPen { get; set; }
+        public double finalDodge { get; set; }
+        public double finalDeflect { get; set; }
+        public double finalPhysCrit { get; set; }
+        public double finalSpecCrit { get; set; }
+        public double finalCritDam { get; set; }
+        public double finalPot { get; set; }
+        public double finalTen { get; set; }
+        public double finalHealthSteal { get; set; }
+        public int finalProt { get; set; }
+        public double finalPhysAcc { get; set; }
+        public double finalSpecAcc { get; set; }
+        public double finalPhysCritAvoid { get; set; }
+        public double finalSpecCritAvoi { get; set; }
+        public int finalMastery { get; set; }
+    }
 }

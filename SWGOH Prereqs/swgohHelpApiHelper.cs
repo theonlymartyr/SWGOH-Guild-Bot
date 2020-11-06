@@ -5,6 +5,7 @@ using System.Dynamic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace SWGOH
@@ -106,16 +107,23 @@ namespace SWGOH
                 string text = $"{json},{DateTime.Now}";
                 // WriteAllText creates a file, writes the specified string to the file,
                 // and then closes the file.    You do NOT need to call Flush() or Close().
-                File.WriteAllText(@"C:\Users\jake\Documents\swgoh\SWGOH Prereqs\SWGOH Prereqs\values.txt", text);
+                File.WriteAllText(detectOS() + @"values.txt", text);
             }
             catch (Exception e) { Console.WriteLine(e.StackTrace); }
         }
-
+        public string detectOS()
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                return $@"C:\Users\jake\Documents\swgoh\SWGOH Prereqs\SWGOH Prereqs\";
+            }
+            return "";
+        }
         public void loadTokens()
         {
             try
             {
-                string text = File.ReadAllText(@"C:\Users\jake\Documents\swgoh\SWGOH Prereqs\SWGOH Prereqs\values.txt");
+                string text = File.ReadAllText(detectOS() + @"values.txt");
                 string[] keys = text.Split(",");
                 token = keys[0];
                 signintime = Convert.ToDateTime(keys[1]);
@@ -129,6 +137,50 @@ namespace SWGOH
             {
                 Console.WriteLine(url);
                 HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+                request.Method = "POST";
+                request.ContentType = "application/json";
+                request.Headers.Add("Authorization", "Bearer " + token + "");
+                request.Timeout = 300000;
+                string json = JsonConvert.SerializeObject(param);
+
+                byte[] byteArray = Encoding.UTF8.GetBytes(param.ToString());
+
+                using (StreamWriter writer = new StreamWriter(request.GetRequestStream()))
+                {
+                    writer.Write(json);
+                }
+                WebResponse response = request.GetResponse();
+                var dataStream = response.GetResponseStream();
+                StreamReader reader = new StreamReader(dataStream);
+                var apiResponse = reader.ReadToEnd();
+                reader.Close();
+                dataStream.Close();
+                response.Close();
+
+                return apiResponse;
+            }
+            catch (WebException e)
+            {
+                using (WebResponse response = e.Response)
+                {
+                    HttpWebResponse httpResponse = (HttpWebResponse)response;
+                    Console.WriteLine("Error code: {0}", httpResponse.StatusCode);
+                    using (Stream data = response.GetResponseStream())
+                    using (var reader = new StreamReader(data))
+                    {
+                        // text is the response body
+                        string text = reader.ReadToEnd();
+                        return text;
+                    }
+                }
+            }
+        }
+        public string fetchNewApi(string url, object param)
+        {
+            try
+            {
+                Console.WriteLine(url);
+                HttpWebRequest request = (HttpWebRequest)WebRequest.Create("https://swgoh.shittybots.me/api/player");
                 request.Method = "POST";
                 request.ContentType = "application/json";
                 request.Headers.Add("Authorization", "Bearer " + token + "");
@@ -158,7 +210,6 @@ namespace SWGOH
                 throw e;
             }
         }
-
         public string fetchPlayer(uint[] allycodes, string language = null, bool? enums = null, object project = null)
         {
             dynamic obj = new ExpandoObject();
@@ -287,10 +338,18 @@ namespace SWGOH
 
         public string getStats(string player)
         {
-            string baseURL = "https://swgoh-stat-calc.glitch.me/api?flags=calcGP,gameStyle";
+            string baseURL = "http://127.0.0.1:8081/api?flags=gameStyle,calcGP";
+            /* if (detectOS().Equals(""))
+             {
+                 baseURL = "http://192.168.0.12:8081/api?flags=gameStyle,calcGP";
+             }
+             else
+             {
+                 baseURL = "http://127.0.0.1:8081/api?flags=gameStyle,calcGP";
+             }*/
             try
             {
-                //Console.WriteLine("Fetching Zetas");
+                Console.WriteLine("Calling " + baseURL);
                 HttpWebRequest request = (HttpWebRequest)WebRequest.Create(baseURL);
                 request.Method = "POST";
                 request.ContentType = "application/json";
