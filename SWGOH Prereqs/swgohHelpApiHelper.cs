@@ -65,6 +65,7 @@ namespace SWGOH
                 //Check to see if token is still valid. Doesn't matter if file doesn't exist, signintime will default to a time that is >3600 seconds from DateTime.Now
                 //So token sill be set to null and a  new token will be grabbed.
                 checkToken();
+
                 if (string.IsNullOrEmpty(token))
                 {
                     HttpWebRequest request = (HttpWebRequest)WebRequest.Create(this.signin);
