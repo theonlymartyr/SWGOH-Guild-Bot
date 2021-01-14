@@ -25,6 +25,7 @@ using Google.Apis.Util.Store;
 using System.Threading;
 using System.Runtime.ConstrainedExecution;
 using System.Timers;
+using System.Diagnostics;
 
 namespace SWGOH
 {
@@ -33,10 +34,14 @@ namespace SWGOH
     /// </summary>
     public class Commands
     {
-        swgohHelpApiHelper helper;
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+        CommandFunctions commandFunctions = new CommandFunctions();
+        string[] GLList = new string[] { "GLREY", "SUPREMELEADERKYLOREN", "GRANDMASTERLUKE", "SITHPALPATINE" };
+        string[] TWToonList = new string[] { "GLREY", "SUPREMELEADERKYLOREN", "GRANDMASTERLUKE", "SITHPALPATINE", "JEDIKNIGHTLUKE", "GENERALSKYWALKER", "DARTHMALAK", "VADER", "PADMEAMIDALA", "JEDIKNIGHTREVAN", "DARTHREVAN", "BASTILASHANDARK", "GRIEVOUS", "DARTHTRAYA", "GEONOSIANBROODALPHA", "CAPITALNEGOTIATOR", "CAPITALMALEVOLENCE", "HOUNDSTOOTH", "MILLENNIUMFALCON" };
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+        public swgohHelpApiHelper helper;
         String path = @"C:\Users\jake\Documents\swgoh\SWGOH Prereqs\SWGOH Prereqs";
         string[] GAToonList = new string[] { "GLREY", "SUPREMELEADERKYLOREN", "GRANDMASTERLUKE", "SITHPALPATINE", "JEDIKNIGHTLUKE", "GENERALSKYWALKER", "DARTHMALAK", "VADER", "DARTHREVAN", "BASTILASHANDARK", "GRIEVOUS", "PADMEAMIDALA", "JEDIKNIGHTREVAN", "DARTHTRAYA", "ENFYSNEST", "CAPITALNEGOTIATOR", "CAPITALMALEVOLENCE", "HOUNDSTOOTH", "MILLENNIUMFALCON" };
-        string[] TWToonList = new string[] { "GLREY", "SUPREMELEADERKYLOREN", "GRANDMASTERLUKE", "SITHPALPATINE", "JEDIKNIGHTLUKE", "GENERALSKYWALKER", "DARTHMALAK", "VADER", "PADMEAMIDALA", "JEDIKNIGHTREVAN", "DARTHREVAN", "BASTILASHANDARK", "GRIEVOUS", "DARTHTRAYA", "BOSSK", "GEONOSIANBROODALPHA", "ENFYSNEST", "CAPITALNEGOTIATOR", "CAPITALMALEVOLENCE", "HOUNDSTOOTH", "MILLENNIUMFALCON" };
         //Mod unit stat 5 is speed
         #region guildstats
         /// <summary>
@@ -54,18 +59,18 @@ namespace SWGOH
             uint parsedAllyCode;
             if (allycode.Contains("-"))
             {
-                parsedAllyCode = parseAllycode(allycode);
+                parsedAllyCode = commandFunctions.parseAllycode(allycode);
             }
             else
             {
                 if (UInt32.TryParse(allycode, out ss))
                 {
-                    parsedAllyCode = parseAllycode(ss.ToString());
+                    parsedAllyCode = commandFunctions.parseAllycode(ss.ToString());
                 }
                 else
                 {
                     sort = allycode;
-                    parsedAllyCode = parseAllycode(checkRegistered(ctx.Member.Id.ToString()));
+                    parsedAllyCode = commandFunctions.parseAllycode(checkRegistered(ctx.Member.Id.ToString()));
                 }
             }
             if (!(parsedAllyCode == 1))
@@ -87,7 +92,7 @@ namespace SWGOH
                     var interactivity = ctx.Client.GetInteractivityModule();
                     //login to the API
 
-                    login();
+                    helper = commandFunctions.login();
                     await m.ModifyAsync(m.Content + "\n\nFetching Guild......");
                     String guildstring = dh.getGuildString(new uint[] { parsedAllyCode }, helper);
                     try
@@ -133,8 +138,9 @@ namespace SWGOH
                             }
                         }
                     }
-                    catch
+                    catch (Exception errors)
                     {
+                        Console.WriteLine(errors.StackTrace);
                         GuildParse.Error guilds = JsonConvert.DeserializeObject<GuildParse.Error>(guildstring);
                         if (guilds.Code == 404)
                         {
@@ -168,17 +174,17 @@ namespace SWGOH
             uint parsedAllyCode;
             if (allycode.Contains("-"))
             {
-                parsedAllyCode = parseAllycode(allycode);
+                parsedAllyCode = commandFunctions.parseAllycode(allycode);
             }
             else
             {
                 if (UInt32.TryParse(allycode, out ss))
                 {
-                    parsedAllyCode = parseAllycode(ss.ToString());
+                    parsedAllyCode = commandFunctions.parseAllycode(ss.ToString());
                 }
                 else
                 {
-                    parsedAllyCode = parseAllycode(checkRegistered(ctx.Member.Id.ToString()));
+                    parsedAllyCode = commandFunctions.parseAllycode(checkRegistered(ctx.Member.Id.ToString()));
                 }
             }
             if (!(parsedAllyCode == 1))
@@ -198,7 +204,7 @@ namespace SWGOH
                     var interactivity = ctx.Client.GetInteractivityModule();
                     String s = "";
                     //login to the API
-                    login();
+                    helper = commandFunctions.login();
 
                     await m.ModifyAsync(m.Content + "\n\n Fetching guild");
                     try
@@ -206,13 +212,31 @@ namespace SWGOH
                         GuildParse.Guild guilds = dh.getGuild(new uint[] { parsedAllyCode }, helper);
                         GuildParse.GuildMember guild = guilds.guild[0];
                         swgohGGhelper help = new swgohGGhelper();
-                        string info = help.getGGinfo(guild.Roster[0].AllyCode);
-                        SwgohPlayer p1 = SwgohPlayer.FromJson(info);
+                        bool ggFound = false;
+                        SwgohPlayer p1 = null;
+                        try
+                        {
+                            string info = help.getGGinfo(guild.Roster[0].AllyCode);
+                            p1 = SwgohPlayer.FromJson(info);
+                            ggFound = true;
+                        }
+                        catch
+                        {
+
+                        }
 
                         if (guilds.guild.Length > 0)
                         {
                             int maxWidth = 75;
-                            string header = $"[{guild.Name}](https://swgoh.gg/g/{p1.Data.GuildId + "/" + p1.Data.GuildName.Replace(" ", "-") + "/"}) Overview ";
+                            string header = "";
+                            if (ggFound)
+                            {
+                                header = $"[{guild.Name}](https://swgoh.gg/g/{p1.Data.GuildId + "/" + p1.Data.GuildName.Replace(" ", "-") + "/"}) Overview ";
+                            }
+                            else
+                            {
+                                header = $"{guild.Name} Overview ";
+                            }
                             int space = maxWidth - header.Length;
                             await m.ModifyAsync(m.Content + "\n\n Building stats display");
                             var embed2 = new DiscordEmbedBuilder
@@ -257,60 +281,15 @@ namespace SWGOH
             }
         }
         #endregion
-        #region TW
-        /// <summary>
-        /// The territory war command. This command pulls information for the guilds specified by the given allycodes.
-        /// </summary>
-        /// <returns>
-        /// A single embed if guild is less than 25 members, 2 embeds if the member count is greater than 25 members. Each member contains their: GP, Toon GP, Ship GP, Total Relic toons, A list of toons at r7, Amount of toons r4+, Amount of toons g13 and Amount of toon g12
-        /// </returns>
-        /// <param name="allycode1">Allycode</param>
-        /// <param name="sort">What to sort the results by (optional, defaults to GP descending</param>
-        [Command("tw"), Description("Compares 2 guilds for TW")]
-        public async Task TWCompare(CommandContext ctx, [Description("Ally code of one guild")] string allycode1, [Description("Ally Code of other guild")] string allycode2 = "")
-        {
-            uint parsedAllyCode1 = 1, parsedAllyCode2 = 1;
-            if (allycode2.Equals(""))
-            {
-                parsedAllyCode2 = parseAllycode(checkRegistered(ctx.Member.Id.ToString()));
-                parsedAllyCode1 = checkAllycode(ctx, allycode1);
-            }
-            else
-            {
-                parsedAllyCode1 = checkAllycode(ctx, allycode1);
-                parsedAllyCode2 = checkAllycode(ctx, allycode2);
-            }
-            if ((!(parsedAllyCode1 == 1) && !(parsedAllyCode2 == 1)))
-            {
-                DataHelper dh = new DataHelper(ctx);
-                var embed = new DiscordEmbedBuilder
-                {
-                    Title = "Stats",
-                    Color = new DiscordColor(0xFF0000) // red
-                };
-                try
-                {
-                    getTWCompare(ctx, parsedAllyCode1, parsedAllyCode2);
-                }
-                catch (Exception e)
-                {
-                    dh.exceptionHandler(e, ctx, embed);
-                }
-            }
-            else
-            {
-                await ctx.RespondAsync("User is not registered. Please register or provide an allycode.");
-            }
-        }
-        #endregion
+
         #region Registration
         [Command("reg"), Description("register allycode to discord handle"), Aliases("r")]
         public async Task registerMember(CommandContext ctx, [Description("Ally Code to register")] string allycode)
         {
             try
             {
-                login();
-                await registerUser(ctx, parseAllycode(allycode));
+                helper = commandFunctions.login();
+                await registerUser(ctx, commandFunctions.parseAllycode(allycode));
             }
             catch (Exception e) { Console.WriteLine(e.StackTrace); }
         }
@@ -349,7 +328,7 @@ namespace SWGOH
             uint sd;
             uint parsedAllyCode;
 
-            parsedAllyCode = parseAllycode(checkRegistered(ctx.Member.Id.ToString()));
+            parsedAllyCode = commandFunctions.parseAllycode(checkRegistered(ctx.Member.Id.ToString()));
             if (!(parsedAllyCode == 1))
             {
                 //  CharacterStrings d = new CharacterStrings();
@@ -376,7 +355,7 @@ namespace SWGOH
 
                             String s = "";
                             //login to the API
-                            login();
+                            helper = commandFunctions.login();
                             await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":stopwatch:"));
 
                             int tries = 0;
@@ -599,373 +578,1069 @@ namespace SWGOH
             await ctx.RespondAsync("", embed: embed);
         }
         #endregion
+        [Command("tw"), Description("Compares 2 guilds for TW")]
+        public async Task TWCompare(CommandContext ctx, [Description("Ally code of one guild")] string allycode1, [Description("Ally Code of other guild")] string allycode2 = "")
+        {
+            uint parsedAllyCode1 = 1, parsedAllyCode2 = 1;
+            if (allycode2.Equals(""))
+            {
+                parsedAllyCode2 = commandFunctions.parseAllycode(commandFunctions.checkRegistered(ctx.Member.Id.ToString()));
+                parsedAllyCode1 = commandFunctions.checkAllycode(ctx, allycode1);
+            }
+            else
+            {
+                parsedAllyCode1 = commandFunctions.checkAllycode(ctx, allycode1);
+                parsedAllyCode2 = commandFunctions.checkAllycode(ctx, allycode2);
+            }
+            if ((!(parsedAllyCode1 == 1) && !(parsedAllyCode2 == 1)))
+            {
+                DataHelper dh = new DataHelper(ctx);
+                var embed = new DiscordEmbedBuilder
+                {
+                    Title = "Stats",
+                    Color = new DiscordColor(0xFF0000) // red
+                };
+                try
+                {
+                    getTWCompare(ctx, parsedAllyCode1, parsedAllyCode2);
+                }
+                catch (Exception e)
+                {
+                    dh.exceptionHandler(e, ctx, embed);
+                }
+            }
+            else
+            {
+                await ctx.RespondAsync("User is not registered. Please register or provide an allycode.");
+            }
+        }
+
         #region TW Compare Logic
         public async void getTWCompare(CommandContext ctx, uint allycode1, uint allycode2)
         {
-
-            DateTime start = DateTime.Now;
-            DataHelper dh = new DataHelper(ctx);
-            await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":stopwatch:"));
-            DiscordMessage m = await ctx.RespondAsync("processing request, standby...");
-
-            var interactivity = ctx.Client.GetInteractivityModule();
-            String s = "", title = "", embeds = "";
-
-            //login to the API
-            login();
-            //Retreive the 2 guilds to compare using an allycode for a member of each guild
-            //If both allycodes are from the same guild, only one guild will return, make sure to check for that
-            if (helper.loggedIn)
+            Console.WriteLine($"Allycode 1: {allycode1} ::  Allycode 2:{allycode2}");
+            if (allycode1 != allycode2)
             {
-                int tries = 0;
-                GuildParse.Guild guilds = null;
-                while (tries < 5)
+                Stopwatch stop = new Stopwatch();
+                stop.Start();
+                //DateTime start = DateTime.Now;
+                DataHelper dh = new DataHelper(ctx);
+                await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":stopwatch:"));
+                DiscordMessage m = await ctx.RespondAsync("processing request, standby...");
+
+                var interactivity = ctx.Client.GetInteractivityModule();
+                String s = "", title = "", embeds = "";
+
+                //login to the API
+                helper = commandFunctions.login();
+                //Retreive the 2 guilds to compare using an allycode for a member of each guild
+                //If both allycodes are from the same guild, only one guild will return, make sure to check for that
+                if (helper.loggedIn)
                 {
-                    Console.WriteLine($"Allycode 1: {allycode1}  &&  Allycode 2: {allycode2}");
-                    try
+                    int tries = 0;
+                    GuildParse.Guild guilds = null;
+                    while (tries < 5)
                     {
-                        await m.ModifyAsync(m.Content + $"\n\n....attempting to retrieve guilds. Try {tries + 1}/5");
-                        guilds = dh.getGuild(new uint[] { allycode1, allycode2 }, helper);
-                        await m.ModifyAsync($"\n\n....Data retrieved.\n\n");
-                        break;
+                        Console.WriteLine($"Allycode 1: {allycode1}  &&  Allycode 2: {allycode2}");
+                        try
+                        {
+                            await m.ModifyAsync(m.Content + $"\n\n....attempting to retrieve guilds. Try {tries + 1}/5");
+                            guilds = dh.getGuild(new uint[] { allycode1, allycode2 }, helper);
+                            await m.ModifyAsync($"\n\n....Data retrieved.\n\n");
+                            break;
+                        }
+                        catch { tries++; }
                     }
-                    catch { tries++; }
-                }
-                if (guilds != null)
-                {
-                    if (guilds.guild.Length > 1)
+                    if (guilds != null)
                     {
-                        var embed = new DiscordEmbedBuilder
+                        if (guilds.guild.Length > 1)
                         {
-                            Title = "TW Comparison",
-                            Color = new DiscordColor(0xFF0000) // red
-                        };
-                        int maxWidth = 75;
-
-                        //Get guilds and build arrays of players
-                        GuildParse.GuildMember guild1 = guilds.guild[0];
-                        GuildParse.GuildMember guild2 = guilds.guild[1];
-
-                        /*************
-                         * Make sure we have all guild members for each guild
-                         * Start with Guild 1
-                         ************/
-                        PlayerParse.Player players1, players2;
-                        try
-                        {
-                            players1 = dh.getInformation(m, guild1, helper, 25);
-                        }
-                        catch
-                        {
-                            players1 = dh.getInformation(m, guild1, helper, 10);
-                        }
-                        /*************
-                         * Make sure we have all guild members for each guild
-                         * On to Guild 2
-                         ************/
-                        try
-                        {
-                            players2 = dh.getInformation(m, guild2, helper, 25);
-                        }
-                        catch
-                        {
-                            players2 = dh.getInformation(m, guild2, helper, 10);
-                        }
-                        if (players1 == null || players2 == null)
-                        {
-                            await ctx.RespondAsync(ctx.User.Mention + " There was an API error. Please try again.");
-                            dh.logCommandInformation("Unsuccessful");
-                        }
-                        else
-                        {
-                            if (guild1.Members == players1.PlayerList.Length && guild2.Members == players2.PlayerList.Length)
+                            var embed = new DiscordEmbedBuilder
                             {
-                                string link1 = "", link2 = "";
-                                for (int i = 0; i < players1.PlayerList.Length; i++)
-                                {
-                                    try
-                                    {
-                                        swgohGGhelper help = new swgohGGhelper();
-                                        string info = help.getGGinfo((uint)players1.PlayerList[i].AllyCode);
-                                        SwgohPlayer p1 = SwgohPlayer.FromJson(info);
-                                        link1 = $"https://swgoh.gg/g/{p1.Data.GuildId + "/" + p1.Data.GuildName.Replace(" ", "-") + "/"}";
-                                        break;
-                                    }
-                                    catch { }
-                                }
-                                for (int i = 0; i < players2.PlayerList.Length; i++)
-                                {
-                                    try
-                                    {
-                                        swgohGGhelper help = new swgohGGhelper();
-                                        string info = help.getGGinfo((uint)players2.PlayerList[i].AllyCode);
-                                        SwgohPlayer p2 = SwgohPlayer.FromJson(info);
-                                        link2 = $"https://swgoh.gg/g/{p2.Data.GuildId + "/" + p2.Data.GuildName.Replace(" ", "-") + "/"}";
-                                        break;
-                                    }
-                                    catch { }
-                                }
-                                string header = $"[{guilds.guild[0].Name}]({link1})  VS  [{guilds.guild[1].Name}]({link2})";
-                                Console.WriteLine(header);
-                                int space = maxWidth - header.Length;
+                                Title = "TW Comparison",
+                                Color = new DiscordColor(0xFF0000) // red
+                            };
+                            int maxWidth = 75;
 
-                                ToonStats ts1 = new ToonStats();
-                                ToonStats ts2 = new ToonStats();
-                                TWGuild guild1st = dh.newGuildStats(players1, TWToonList);
-                                TWGuild guild2nd = dh.newGuildStats(players2, TWToonList);
-                                try
-                                {
-                                    dh.calcIgnoredGP(guild1, guild1st);
-                                }
-                                catch { }
-                                try
-                                {
-                                    dh.calcIgnoredGP(guild2, guild2nd);
-                                }
-                                catch { }
-                                //Build our output
-                                #region Header Output
-                                s += "**" + header + "**\n";
-                                s += "======= Overview =======```\n";
-                                try
-                                {
-                                    s += dh.createLongLine("Members:", (guild1.Members - ((guild1st.ignoreList != null) ? guild1st.ignoreList.Count : 0)).ToString(), (guild2.Members - ((guild2nd.ignoreList != null) ? guild2nd.ignoreList.Count : 0)).ToString());
-                                }
-                                catch { s += dh.createLongLine("Members:", guild1.Members.ToString(), guild2.Members.ToString()); }
-                                s += dh.createLongLine("Total GP:", ((guild1.Gp - guild1st.gpIgnored) / 1000000).ToString("0.##") + "M", ((guild2.Gp - guild2nd.gpIgnored) / 1000000).ToString("0.##") + "M");
-                                s += dh.createLongLine("Character GP:", ((dh.buildCharGP(guild1.Roster, "Char") - guild1st.gpIgnoredToon) / 1000000).ToString("0.##") + "M", ((dh.buildCharGP(guild2.Roster, "Char") - guild2nd.gpIgnoredToon) / 1000000).ToString("0.##") + "M");
-                                s += dh.createLongLine("Fleet GP:", ((dh.buildCharGP(guild1.Roster, "Fleet") - guild1st.gpIgnoredFleet) / 1000000).ToString("0.##") + "M", ((dh.buildCharGP(guild2.Roster, "Fleet") - guild2nd.gpIgnoredFleet) / 1000000).ToString("0.##") + "M");
-                                s += "```";
-                                embed.Description = s;
+                            //Get guilds and build arrays of players
+                            GuildParse.GuildMember guild1 = guilds.guild[0];
+                            GuildParse.GuildMember guild2 = guilds.guild[1];
 
-                                #endregion
-                                #region gear
-                                title = "==Gear==\n";
-                                embeds += "```CSS\n";
-                                embeds += dh.createLongLine("G13:", guild1st.G13.ToString(), guild2nd.G13.ToString());
-                                embeds += dh.createLongLine("G12+5:", guild1st.G125.ToString(), guild2nd.G125.ToString());
-                                embeds += dh.createLongLine("G12+4:", guild1st.G124.ToString(), guild2nd.G124.ToString());
-                                embeds += dh.createLongLine("G12+3:", guild1st.G123.ToString(), guild2nd.G123.ToString());
-                                embeds += dh.createLongLine("G12+2:", guild1st.G122.ToString(), guild2nd.G122.ToString());
-                                embeds += dh.createLongLine("G12+1:", guild1st.G121.ToString(), guild2nd.G121.ToString());
-                                embeds += dh.createLongLine("G12:", guild1st.G12.ToString(), guild2nd.G12.ToString());
-                                embeds += dh.createLongLine("G11:", guild1st.G11.ToString(), guild2nd.G11.ToString());
-                                embeds += "```";
-                                embed.AddField($"{title}", embeds, false);
-                                #endregion
-                                #region relics
-                                title = "==Relics==";
-                                embeds = "```CSS\n";
-                                embeds += dh.createLongLine("Total Relics:", guild1st.TotalRelics.ToString(), guild2nd.TotalRelics.ToString());
-                                embeds += dh.createLongLine("Relic 7:", guild1st.relics[7].ToString(), guild2nd.relics[7].ToString());
-                                embeds += dh.createLongLine("Relic 6:", guild1st.relics[6].ToString(), guild2nd.relics[6].ToString());
-                                embeds += dh.createLongLine("Relic 5:", guild1st.relics[5].ToString(), guild2nd.relics[5].ToString());
-                                embeds += dh.createLongLine("Relic 4:", guild1st.relics[4].ToString(), guild2nd.relics[4].ToString());
-                                embeds += dh.createLongLine("Relic 3:", guild1st.relics[3].ToString(), guild2nd.relics[3].ToString());
-                                embeds += dh.createLongLine("Relic 2:", guild1st.relics[2].ToString(), guild2nd.relics[2].ToString());
-                                embeds += dh.createLongLine("Relic 1:", guild1st.relics[1].ToString(), guild2nd.relics[1].ToString());
-                                embeds += dh.createLongLine("Relic 0:", guild1st.relics[0].ToString(), guild2nd.relics[0].ToString());
-                                embeds += "```";
-                                embed.AddField($"{title}", embeds, false);
-                                #endregion
-                                #region mods
-                                title = "==Mods==";
-                                embeds = "```CSS\n";
-                                embeds += dh.createLongLine("6 Dot Mods:", guild1st.sixStarMods.ToString(), guild2nd.sixStarMods.ToString());
-                                embeds += dh.createLongLine("25+ Speed:", guild1st.speedMods[3].ToString(), guild2nd.speedMods[3].ToString());
-                                embeds += dh.createLongLine("20+ Speed:", guild1st.speedMods[2].ToString(), guild2nd.speedMods[2].ToString());
-                                embeds += dh.createLongLine("15+ Speed:", guild1st.speedMods[1].ToString(), guild2nd.speedMods[1].ToString());
-                                embeds += dh.createLongLine("10+ Speed:", guild1st.speedMods[0].ToString(), guild2nd.speedMods[0].ToString());
-                                embeds += dh.createLongLine("100+ Off:", guild1st.off100.ToString(), guild2nd.off100.ToString());
-                                embeds += "```";
-                                embed.AddField($"{title}", embeds, false);
-                                #endregion
-                                CharacterDefID d = new CharacterDefID();
-                                foreach (string toonName in TWToonList)
-                                {
-                                    Toons p1, p2;
-                                    //Look for the desired toon in the players list, if it exists, the corresponding GAToon will be a copy of it, otherwise it will be null
-                                    p1 = guild1st.toonList.Find(x => x.id.Equals(toonName));
-                                    if (p1 == null) { p1 = new Toons(toonName, 6); guild1st.toonList.Add(p1); }
-                                    p2 = guild2nd.toonList.Find(x => x.id.Equals(toonName));
-                                    if (p2 == null) { p2 = new Toons(toonName, 6); guild2nd.toonList.Add(p2); }
-
-                                    //if a particular toon is not in the players list, create a new empty toon for comparison reasons
-                                    title = $"{d.toons[toonName]}";
-                                    embeds = "```CSS\n";
-                                    if (p1.ship)
-                                    {
-                                        embeds += dh.createLine("Total:", p1.Total.ToString(), p2.Total.ToString());
-                                        embeds += dh.createLine("7*:", p1.stars[2].ToString(), p2.stars[2].ToString());
-                                        embeds += dh.createLine("6*:", p1.stars[1].ToString(), p2.stars[1].ToString());
-                                        embeds += dh.createLine("5*:", p1.stars[0].ToString(), p2.stars[0].ToString());
-                                    }
-                                    else
-                                    {
-                                        //{ "GLREY", "SUPREMELEADERKYLOREN", "DARTHMALAK", "GENERALSKYWALKER", "DARTHREVAN", "BASTILASHANDARK", "GRIEVOUS", "PADMEAMIDALA", "JEDIKNIGHTREVAN", "DARTHTRAYA", "HOUNDSTOOTH", "ENFYSNEST", "BOSSK", "GEONOSIANBROODALPHA", "CAPITALNEGOTIATOR", "CAPITALMALEVOLENCE", "MILLENNIUMFALCON" };
-                                        embeds += dh.createLine("Total:", p1.Total.ToString(), p2.Total.ToString());
-                                        embeds += dh.createLine("7*:", p1.stars[2].ToString(), p2.stars[2].ToString());
-                                        embeds += dh.createLine("6*:", p1.stars[1].ToString(), p2.stars[1].ToString());
-                                        embeds += dh.createLine("5*:", p1.stars[0].ToString(), p2.stars[0].ToString());
-                                        embeds += dh.createLine("G13:", p1.gear[2].ToString(), p2.gear[2].ToString());
-                                        embeds += dh.createLine("G12:", p1.gear[1].ToString(), p2.gear[1].ToString());
-                                        embeds += dh.createLine("G11:", p1.gear[0].ToString(), p2.gear[0].ToString());
-                                        embeds += dh.createLine("Relic 4+:", (p1.relics[4] + p1.relics[5] + p1.relics[6] + p1.relics[7]).ToString(), (p2.relics[4] + p2.relics[5] + p2.relics[6] + p2.relics[7]).ToString());
-                                        embeds += dh.createLine("Relic 7:", p1.relics[7].ToString(), p2.relics[7].ToString());
-                                        embeds += dh.createLine("GP 16K+:", p1.gp16.ToString(), p2.gp16.ToString());
-                                        embeds += dh.createLine("GP 20K+:", p1.gp20.ToString(), p2.gp20.ToString());
-                                        embeds += dh.createLine("1Z:", p1.numZetas[0].ToString(), p2.numZetas[0].ToString());
-                                        if (!toonName.Equals("BASTILASHANDARK") && !toonName.Equals("ENFYSNEST"))
-                                        {
-                                            embeds += dh.createLine("2Z:", p1.numZetas[1].ToString(), p2.numZetas[1].ToString());
-                                            if (toonName.Equals("GLREY") || toonName.Equals("SUPREMELEADERKYLOREN") || toonName.Equals("GRANDMASTERLUKE") || toonName.Equals("SITHPALPATINE") || toonName.Equals("GENERALSKYWALKER") || toonName.Equals("DARTHREVAN") || toonName.Equals("JEDIKNIGHTREVAN") || toonName.Equals("VADER"))
-                                            {
-                                                embeds += dh.createLine("3Z:", p1.numZetas[2].ToString(), p2.numZetas[2].ToString());
-                                            }
-                                            if (toonName.Equals("GLREY") || toonName.Equals("SUPREMELEADERKYLOREN") || toonName.Equals("GRANDMASTERLUKE") || toonName.Equals("SITHPALPATINE") || toonName.Equals("GENERALSKYWALKER"))
-                                            {
-                                                embeds += dh.createLine("4Z:", p1.numZetas[3].ToString(), p2.numZetas[3].ToString());
-                                            }
-                                            if (toonName.Equals("GLREY") || toonName.Equals("SUPREMELEADERKYLOREN") || toonName.Equals("GRANDMASTERLUKE") || toonName.Equals("SITHPALPATINE"))
-                                            {
-                                                embeds += dh.createLine("5Z:", p1.numZetas[4].ToString(), p2.numZetas[4].ToString());
-                                                embeds += dh.createLine("6Z:", p1.numZetas[5].ToString(), p2.numZetas[5].ToString());
-                                            }
-                                        }
-                                    }
-                                    embeds += "```";
-                                    embed.AddField($"{title}", embeds, true);
-                                }
-                                #region ignoring
-                                try
-                                {
-                                    Console.WriteLine("Building Ignore embed");
-                                    String list = "";
-                                    if (guild1st.ignoreList != null)
-                                    {
-                                        foreach (String member in guild1st.ignoreList)
-                                        {
-                                            foreach (GuildParse.Roster r in guild1.Roster)
-                                            {
-                                                if (r.AllyCode.ToString().Equals(member))
-                                                {
-                                                    try
-                                                    {
-                                                        list += $"{r.Name} - {member}  \n\n";
-                                                        Console.WriteLine($"{member} added to ignore embed");
-                                                    }
-                                                    catch { }
-                                                }
-                                            }
-                                        }
-                                        title = "==Ignoring==";
-                                        embeds = "```CSS\n";
-                                        embeds += list;
-                                        embeds += "```";
-                                        embed.AddField($"{title}", embeds, false);
-                                    }
-                                    if (guild2nd.ignoreList != null)
-                                    {
-                                        foreach (String member in guild2nd.ignoreList)
-                                        {
-                                            foreach (GuildParse.Roster r in guild2.Roster)
-                                            {
-                                                if (r.AllyCode.ToString().Equals(member))
-                                                {
-                                                    try
-                                                    {
-                                                        list += $"{r.Name} - {member}  \n\n";
-                                                        Console.WriteLine($"{member} added to ignore embed");
-                                                    }
-                                                    catch { }
-                                                }
-                                            }
-                                        }
-                                        title = "==Ignoring==";
-                                        embeds = "```CSS\n";
-                                        embeds += list;
-                                        embeds += "```";
-                                        embed.AddField($"{title}", embeds, false);
-                                    }
-                                }
-                                catch { Console.WriteLine("Building Ignore embed failed"); }
-                                #endregion
-
-
-
-                                DateTime end = DateTime.Now;
-                                Console.WriteLine((end - start).TotalSeconds);
-
-                                await m.DeleteAsync();
-                                try
-                                {
-                                    await ctx.RespondAsync(ctx.Member.Mention + " Here is the information you requested:", embed: embed);
-                                }
-                                catch
-                                {
-                                    string desc = embed.Description;
-                                    embed.Description = desc.Replace("[", "").Replace("]", "").Replace($"({link1})", "").Replace($"({link2})", "");
-                                    await ctx.RespondAsync(ctx.Member.Mention + " Here is the information you requested:", embed: embed);
-                                }
-                                dh.logCommandInformation("Successful");
-                                await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":thumbsup:"));
+                            /*************
+                             * Make sure we have all guild members for each guild
+                             * Start with Guild 1
+                             ************/
+                            PlayerParse.Player players1, players2;
+                            try
+                            {
+                                players1 = dh.getInformation(m, guild1, helper, 25);
+                            }
+                            catch
+                            {
+                                players1 = dh.getInformation(m, guild1, helper, 10);
+                            }
+                            /*************
+                             * Make sure we have all guild members for each guild
+                             * On to Guild 2
+                             ************/
+                            try
+                            {
+                                players2 = dh.getInformation(m, guild2, helper, 25);
+                            }
+                            catch
+                            {
+                                players2 = dh.getInformation(m, guild2, helper, 10);
+                            }
+                            if (players1 == null || players2 == null)
+                            {
+                                await ctx.RespondAsync(ctx.User.Mention + " There was an API error. Please try again.");
+                                dh.logCommandInformation("Unsuccessful");
                             }
                             else
                             {
-                                await ctx.RespondAsync(ctx.User.Mention + " it appears something has went wrong, please try again in a few minutes.");
-                                dh.logCommandInformation("Unsuccessful");
+                                if (guild1.Members == players1.PlayerList.Length && guild2.Members == players2.PlayerList.Length)
+                                {
+                                    string link1 = "", link2 = "";
+                                    for (int i = 0; i < players1.PlayerList.Length; i++)
+                                    {
+                                        try
+                                        {
+                                            swgohGGhelper help = new swgohGGhelper();
+                                            string info = help.getGGinfo((uint)players1.PlayerList[i].AllyCode);
+                                            SwgohPlayer p1 = SwgohPlayer.FromJson(info);
+                                            link1 = $"https://swgoh.gg/g/{p1.Data.GuildId + "/" + p1.Data.GuildName.Replace(" ", "-") + "/"}";
+                                            break;
+                                        }
+                                        catch { }
+                                    }
+                                    for (int i = 0; i < players2.PlayerList.Length; i++)
+                                    {
+                                        try
+                                        {
+                                            swgohGGhelper help = new swgohGGhelper();
+                                            string info = help.getGGinfo((uint)players2.PlayerList[i].AllyCode);
+                                            SwgohPlayer p2 = SwgohPlayer.FromJson(info);
+                                            link2 = $"https://swgoh.gg/g/{p2.Data.GuildId + "/" + p2.Data.GuildName.Replace(" ", "-") + "/"}";
+                                            break;
+                                        }
+                                        catch { }
+                                    }
+                                    string header = $"[{guilds.guild[0].Name}]({link1})  VS  [{guilds.guild[1].Name}]({link2})";
+                                    int space = maxWidth - header.Length;
+
+                                    ToonStats ts1 = new ToonStats();
+                                    ToonStats ts2 = new ToonStats();
+                                    TWGuild guild1st = dh.newGuildStats(players1, TWToonList);
+                                    TWGuild guild2nd = dh.newGuildStats(players2, TWToonList);
+                                    try
+                                    {
+                                        dh.calcIgnoredGP(guild1, guild1st);
+                                    }
+                                    catch { }
+                                    try
+                                    {
+                                        dh.calcIgnoredGP(guild2, guild2nd);
+                                    }
+                                    catch { }
+                                    //Build our output
+                                    #region Header Output
+                                    s += "**" + header + "**\n";
+                                    s += "======= Overview =======```\n";
+                                    try
+                                    {
+                                        s += dh.createLongLine("Members:", (guild1.Members - ((guild1st.ignoreList != null) ? guild1st.ignoreList.Count : 0)).ToString(), (guild2.Members - ((guild2nd.ignoreList != null) ? guild2nd.ignoreList.Count : 0)).ToString());
+                                    }
+                                    catch { s += dh.createLongLine("Members:", guild1.Members.ToString(), guild2.Members.ToString()); }
+                                    s += dh.createLongLine("Total GP:", ((guild1.Gp - guild1st.gpIgnored) / 1000000).ToString("0.##") + "M", ((guild2.Gp - guild2nd.gpIgnored) / 1000000).ToString("0.##") + "M");
+                                    s += dh.createLongLine("Character GP:", ((dh.buildCharGP(guild1.Roster, "Char") - guild1st.gpIgnoredToon) / 1000000).ToString("0.##") + "M", ((dh.buildCharGP(guild2.Roster, "Char") - guild2nd.gpIgnoredToon) / 1000000).ToString("0.##") + "M");
+                                    s += dh.createLongLine("Fleet GP:", ((dh.buildCharGP(guild1.Roster, "Fleet") - guild1st.gpIgnoredFleet) / 1000000).ToString("0.##") + "M", ((dh.buildCharGP(guild2.Roster, "Fleet") - guild2nd.gpIgnoredFleet) / 1000000).ToString("0.##") + "M");
+                                    s += "```";
+                                    embed.Description = s;
+
+                                    #endregion
+                                    #region gear
+                                    title = "==Gear==\n";
+                                    embeds += "```CSS\n";
+                                    embeds += dh.createLongLine("G13:", guild1st.G13.ToString(), guild2nd.G13.ToString());
+                                    embeds += dh.createLongLine("G12+5:", guild1st.G125.ToString(), guild2nd.G125.ToString());
+                                    embeds += dh.createLongLine("G12+4:", guild1st.G124.ToString(), guild2nd.G124.ToString());
+                                    embeds += dh.createLongLine("G12+3:", guild1st.G123.ToString(), guild2nd.G123.ToString());
+                                    embeds += dh.createLongLine("G12+2:", guild1st.G122.ToString(), guild2nd.G122.ToString());
+                                    embeds += dh.createLongLine("G12+1:", guild1st.G121.ToString(), guild2nd.G121.ToString());
+                                    embeds += dh.createLongLine("G12:", guild1st.G12.ToString(), guild2nd.G12.ToString());
+                                    embeds += dh.createLongLine("G11:", guild1st.G11.ToString(), guild2nd.G11.ToString());
+                                    embeds += "```";
+                                    embed.AddField($"{title}", embeds, false);
+                                    #endregion
+                                    #region relics
+                                    title = "==Relics==";
+                                    embeds = "```CSS\n";
+                                    embeds += dh.createLongLine("Total Relics:", guild1st.TotalRelics.ToString(), guild2nd.TotalRelics.ToString());
+                                    embeds += dh.createLongLine("Relic 8:", guild1st.relics[8].ToString(), guild2nd.relics[8].ToString());
+                                    embeds += dh.createLongLine("Relic 7:", guild1st.relics[7].ToString(), guild2nd.relics[7].ToString());
+                                    embeds += dh.createLongLine("Relic 6:", guild1st.relics[6].ToString(), guild2nd.relics[6].ToString());
+                                    embeds += dh.createLongLine("Relic 5:", guild1st.relics[5].ToString(), guild2nd.relics[5].ToString());
+                                    embeds += dh.createLongLine("Relic 4:", guild1st.relics[4].ToString(), guild2nd.relics[4].ToString());
+                                    embeds += dh.createLongLine("Relic 3:", guild1st.relics[3].ToString(), guild2nd.relics[3].ToString());
+                                    embeds += dh.createLongLine("Relic 2:", guild1st.relics[2].ToString(), guild2nd.relics[2].ToString());
+                                    embeds += dh.createLongLine("Relic 1:", guild1st.relics[1].ToString(), guild2nd.relics[1].ToString());
+                                    embeds += dh.createLongLine("Relic 0:", guild1st.relics[0].ToString(), guild2nd.relics[0].ToString());
+                                    embeds += "```";
+                                    embed.AddField($"{title}", embeds, false);
+                                    #endregion
+                                    #region mods
+                                    title = "==Mods==";
+                                    embeds = "```CSS\n";
+                                    embeds += dh.createLongLine("6 Dot Mods:", guild1st.sixStarMods.ToString(), guild2nd.sixStarMods.ToString());
+                                    embeds += dh.createLongLine("25+ Speed:", guild1st.speedMods[3].ToString(), guild2nd.speedMods[3].ToString());
+                                    embeds += dh.createLongLine("20+ Speed:", guild1st.speedMods[2].ToString(), guild2nd.speedMods[2].ToString());
+                                    embeds += dh.createLongLine("15+ Speed:", guild1st.speedMods[1].ToString(), guild2nd.speedMods[1].ToString());
+                                    embeds += dh.createLongLine("10+ Speed:", guild1st.speedMods[0].ToString(), guild2nd.speedMods[0].ToString());
+                                    embeds += dh.createLongLine("100+ Off:", guild1st.off100.ToString(), guild2nd.off100.ToString());
+                                    embeds += "```";
+                                    embed.AddField($"{title}", embeds, false);
+                                    #endregion
+                                    CharacterDefID d = new CharacterDefID();
+                                    int totalGL1 = 0, totalGL2 = 0;
+                                    foreach (string toonName in GLList)
+                                    {
+                                        Toons p1, p2;
+                                        p1 = guild1st.toonList.Find(x => x.id.Equals(toonName));
+                                        if (p1 == null) { /*p1 = new Toons(toonName, 6); /*guild1st.toonList.Add(p1);*/ }
+                                        p2 = guild2nd.toonList.Find(x => x.id.Equals(toonName));
+                                        if (p2 == null) { /*p2 = new Toons(toonName, 6); guild2nd.toonList.Add(p2); */}
+                                        totalGL1 += p1.Total;
+                                        totalGL2 += p2.Total;
+                                    }
+                                    title = $"GL Totals";
+                                    embeds = "```CSS\n";
+                                    embeds += dh.createLongLine("Total GL:", totalGL1.ToString(), totalGL2.ToString());
+                                    foreach (string toonName in GLList)
+                                    {
+                                        Toons p1, p2;
+                                        p1 = guild1st.toonList.Find(x => x.id.Equals(toonName));
+                                        if (p1 == null) { /*p1 = new Toons(toonName, 6); /*guild1st.toonList.Add(p1);*/ }
+                                        p2 = guild2nd.toonList.Find(x => x.id.Equals(toonName));
+                                        if (p2 == null) { /*p2 = new Toons(toonName, 6); guild2nd.toonList.Add(p2); */}
+
+                                        embeds += dh.createLongLine($"Total {d.toons[toonName]}:", p1.Total.ToString(), p2.Total.ToString());
+                                    }
+                                    embeds += "```";
+                                    embed.AddField($"{title}", embeds, false);
+                                    foreach (string toonName in TWToonList)
+                                    {
+                                        Toons p1, p2;
+                                        //Look for the desired toon in the players list, if it exists, the corresponding GAToon will be a copy of it, otherwise it will be null
+                                        p1 = guild1st.toonList.Find(x => x.id.Equals(toonName));
+                                        if (p1 == null) { p1 = new Toons(toonName, 6); guild1st.toonList.Add(p1); }
+                                        p2 = guild2nd.toonList.Find(x => x.id.Equals(toonName));
+                                        if (p2 == null) { p2 = new Toons(toonName, 6); guild2nd.toonList.Add(p2); }
+
+                                        //if a particular toon is not in the players list, create a new empty toon for comparison reasons
+                                        title = $"{d.toons[toonName]}";
+                                        embeds = "```CSS\n";
+                                        if (p1.ship)
+                                        {
+                                            embeds += dh.createLine("Total:", p1.Total.ToString(), p2.Total.ToString());
+                                            embeds += dh.createLine("7*:", p1.stars[2].ToString(), p2.stars[2].ToString());
+                                            embeds += dh.createLine("6*:", p1.stars[1].ToString(), p2.stars[1].ToString());
+                                            embeds += dh.createLine("5*:", p1.stars[0].ToString(), p2.stars[0].ToString());
+                                        }
+                                        else
+                                        {
+                                            //{ "GLREY", "SUPREMELEADERKYLOREN", "DARTHMALAK", "GENERALSKYWALKER", "DARTHREVAN", "BASTILASHANDARK", "GRIEVOUS", "PADMEAMIDALA", "JEDIKNIGHTREVAN", "DARTHTRAYA", "HOUNDSTOOTH", "ENFYSNEST", "BOSSK", "GEONOSIANBROODALPHA", "CAPITALNEGOTIATOR", "CAPITALMALEVOLENCE", "MILLENNIUMFALCON" };
+                                            embeds += dh.createLine("Total:", p1.Total.ToString(), p2.Total.ToString());
+                                            embeds += dh.createLine("7*:", p1.stars[2].ToString(), p2.stars[2].ToString());
+                                            embeds += dh.createLine("6*:", p1.stars[1].ToString(), p2.stars[1].ToString());
+                                            embeds += dh.createLine("5*:", p1.stars[0].ToString(), p2.stars[0].ToString());
+                                            embeds += dh.createLine("G13:", p1.gear[2].ToString(), p2.gear[2].ToString());
+                                            embeds += dh.createLine("G12:", p1.gear[1].ToString(), p2.gear[1].ToString());
+                                            embeds += dh.createLine("G11:", p1.gear[0].ToString(), p2.gear[0].ToString());
+                                            embeds += dh.createLine("Relic 4+:", (p1.relics[4] + p1.relics[5] + p1.relics[6] + p1.relics[7]).ToString(), (p2.relics[4] + p2.relics[5] + p2.relics[6] + p2.relics[7]).ToString());
+                                            embeds += dh.createLine("Relic 7:", p1.relics[7].ToString(), p2.relics[7].ToString());
+                                            embeds += dh.createLine("GP 16K+:", p1.gp16.ToString(), p2.gp16.ToString());
+                                            embeds += dh.createLine("GP 20K+:", p1.gp20.ToString(), p2.gp20.ToString());
+                                            embeds += dh.createLine("1Z:", p1.numZetas[0].ToString(), p2.numZetas[0].ToString());
+                                            if (!toonName.Equals("BASTILASHANDARK") && !toonName.Equals("ENFYSNEST"))
+                                            {
+                                                embeds += dh.createLine("2Z:", p1.numZetas[1].ToString(), p2.numZetas[1].ToString());
+                                                if (toonName.Equals("GLREY") || toonName.Equals("SUPREMELEADERKYLOREN") || toonName.Equals("GRANDMASTERLUKE") || toonName.Equals("SITHPALPATINE") || toonName.Equals("GENERALSKYWALKER") || toonName.Equals("DARTHREVAN") || toonName.Equals("JEDIKNIGHTREVAN") || toonName.Equals("VADER"))
+                                                {
+                                                    embeds += dh.createLine("3Z:", p1.numZetas[2].ToString(), p2.numZetas[2].ToString());
+                                                }
+                                                if (toonName.Equals("GLREY") || toonName.Equals("SUPREMELEADERKYLOREN") || toonName.Equals("GRANDMASTERLUKE") || toonName.Equals("SITHPALPATINE") || toonName.Equals("GENERALSKYWALKER"))
+                                                {
+                                                    embeds += dh.createLine("4Z:", p1.numZetas[3].ToString(), p2.numZetas[3].ToString());
+                                                }
+                                                if (toonName.Equals("GLREY") || toonName.Equals("SUPREMELEADERKYLOREN") || toonName.Equals("GRANDMASTERLUKE") || toonName.Equals("SITHPALPATINE"))
+                                                {
+                                                    embeds += dh.createLine("5Z:", p1.numZetas[4].ToString(), p2.numZetas[4].ToString());
+                                                    embeds += dh.createLine("6Z:", p1.numZetas[5].ToString(), p2.numZetas[5].ToString());
+                                                }
+                                            }
+                                        }
+                                        embeds += "```";
+                                        embed.AddField($"{title}", embeds, true);
+                                    }
+                                    #region ignoring
+                                    try
+                                    {
+                                        Console.WriteLine("Building Ignore embed");
+                                        String list = "";
+                                        try
+                                        {
+                                            if (guild1st.ignoreList != null)
+                                            {
+                                                foreach (String member in guild1st.ignoreList)
+                                                {
+                                                    foreach (GuildParse.Roster r in guild1.Roster)
+                                                    {
+                                                        if (r.AllyCode.ToString().Equals(member))
+                                                        {
+                                                            try
+                                                            {
+                                                                list += $"{r.Name} - {member}  \n\n";
+                                                                Console.WriteLine($"{member} added to ignore embed");
+                                                            }
+                                                            catch { }
+                                                        }
+                                                    }
+                                                }
+                                                title = "==Ignoring==";
+                                                embeds = "```CSS\n";
+                                                embeds += list;
+                                                embeds += "```";
+                                                embed.AddField($"{title}", embeds, false);
+                                            }
+                                        }
+                                        catch { }
+                                        try
+                                        {
+                                            if (guild2nd.ignoreList != null)
+                                            {
+                                                foreach (String member in guild2nd.ignoreList)
+                                                {
+                                                    foreach (GuildParse.Roster r in guild2.Roster)
+                                                    {
+                                                        if (r.AllyCode.ToString().Equals(member))
+                                                        {
+                                                            try
+                                                            {
+                                                                list += $"{r.Name} - {member}  \n\n";
+                                                                Console.WriteLine($"{member} added to ignore embed");
+                                                            }
+                                                            catch { }
+                                                        }
+                                                    }
+                                                }
+                                                title = "==Ignoring==";
+                                                embeds = "```CSS\n";
+                                                embeds += list;
+                                                embeds += "```";
+                                                embed.AddField($"{title}", embeds, false);
+                                            }
+                                        }
+                                        catch { }
+                                    }
+                                    catch { Console.WriteLine("Building Ignore embed failed"); }
+                                    #endregion
+
+                                    stop.Stop();
+                                    Console.WriteLine(stop.Elapsed.ToString("G"));
+
+                                    // DateTime end = DateTime.Now;
+                                    //Console.WriteLine((end - start).TotalSeconds);
+
+                                    await m.DeleteAsync();
+                                    try
+                                    {
+                                        Console.WriteLine("trying to respond");
+                                        await ctx.RespondAsync(ctx.Member.Mention + " Here is the information you requested:", embed: embed);
+
+                                    }
+                                    catch
+                                    {
+                                        Console.WriteLine("Something is goofy");
+                                        string desc = embed.Description;
+                                        foreach (DiscordEmbedField f in embed.Fields)
+                                        {
+                                            Console.WriteLine(f.Name + "   ");
+                                        }
+                                        embed.Description = desc.Replace("[", "").Replace("]", "").Replace($"({link1})", "").Replace($"({link2})", "");
+                                        await ctx.RespondAsync(ctx.Member.Mention + " Here is the information you requested:", embed: embed);
+                                    }
+                                    dh.logCommandInformation("Successful");
+                                    await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":thumbsup:"));
+                                }
+                                else
+                                {
+                                    await ctx.RespondAsync(ctx.User.Mention + " it appears something has went wrong, please try again in a few minutes.");
+                                    dh.logCommandInformation("Unsuccessful");
+                                }
                             }
+                        }
+                        else
+                        {
+                            await m.ModifyAsync($"\n\n....Only 1 guild found.......Processing.\n\n");
+                            bool match = false; uint badCode = 0;
+                            foreach (GuildParse.Roster member in guilds.guild[0].Roster)
+                            {
+                                if (allycode1 == member.AllyCode)
+                                {
+                                    match = true;
+                                    badCode = allycode2;
+                                    await m.ModifyAsync($"\n\n....Found Bad Code.\n\n");
+                                    break;
+                                }
+                            }
+                            if (!match)
+                            {
+                                badCode = allycode1;
+                            }
+
+                            String guildstring = dh.getGuildString(new uint[] { badCode }, helper);
+                            var embed = new DiscordEmbedBuilder
+                            {
+                                Title = "Stats",
+                                Color = new DiscordColor(0xFF0000) // red
+                            };
+                            GuildParse.Error guildTester = JsonConvert.DeserializeObject<GuildParse.Error>(guildstring);
+                            if (guildTester.Code == 404)
+                            {
+                                Console.WriteLine("Here");
+                                embed.Title = "Oh No!";
+                                embed.Description = $"Guild not found with  ***{badCode}***. Please try another.";
+                                await ctx.RespondAsync("", embed: embed);
+                            }
+                            dh.logCommandInformation("Unsuccessful");
                         }
                     }
                     else
                     {
-                        await m.ModifyAsync($"\n\n....Only 1 guild found.......Processing.\n\n");
-                        bool match = false; uint badCode = 0;
-                        foreach (GuildParse.Roster member in guilds.guild[0].Roster)
-                        {
-                            if (allycode1 == member.AllyCode)
-                            {
-                                match = true;
-                                badCode = allycode2;
-                                await m.ModifyAsync($"\n\n....Found Bad Code.\n\n");
-                                break;
-                            }
-                        }
-                        if (!match)
-                        {
-                            badCode = allycode1;
-                        }
-
-                        String guildstring = dh.getGuildString(new uint[] { badCode }, helper);
-                        var embed = new DiscordEmbedBuilder
-                        {
-                            Title = "Stats",
-                            Color = new DiscordColor(0xFF0000) // red
-                        };
-                        GuildParse.Error guildTester = JsonConvert.DeserializeObject<GuildParse.Error>(guildstring);
-                        if (guildTester.Code == 404)
-                        {
-                            Console.WriteLine("Here");
-                            embed.Title = "Oh No!";
-                            embed.Description = $"Guild not found with  ***{badCode}***. Please try another.";
-                            await ctx.RespondAsync("", embed: embed);
-                        }
+                        await ctx.RespondAsync(ctx.User.Mention + " I had an issue retireving guild data. The API seems to be under heavy load. Please try again.");
                         dh.logCommandInformation("Unsuccessful");
                     }
                 }
                 else
                 {
+                    await m.DeleteAsync();
                     await ctx.RespondAsync(ctx.User.Mention + " I had an issue retireving guild data. The API seems to be under heavy load. Please try again.");
-                    dh.logCommandInformation("Unsuccessful");
                 }
             }
             else
             {
-                await m.DeleteAsync();
-                await ctx.RespondAsync(ctx.User.Mention + " I had an issue retireving guild data. The API seems to be under heavy load. Please try again.");
+                await ctx.RespondAsync(ctx.User.Mention + " please supply 2 valid or different codes.");
+
             }
         }
         #endregion
+        [Command("twi"), Description("Add a guild member to the ignore list for TW. This list is set for the guild, NOT the user.")]
+        public async Task TWignore(CommandContext ctx, [RemainingText] string allycode)
+        {
+            Console.WriteLine(RuntimeInformation.IsOSPlatform(OSPlatform.Linux));
+            string[] ignoredCodes;
+            uint[] parsedAllycodes;
+            try
+            {
+                ignoredCodes = allycode.Split(' ');
+                parsedAllycodes = new uint[ignoredCodes.Length];
+            }
+            catch (Exception e) { Console.WriteLine(e.Message); ignoredCodes = new string[1]; ignoredCodes[0] = allycode; parsedAllycodes = new uint[ignoredCodes.Length]; }
+            Console.WriteLine(ignoredCodes.Length);
+            await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":stopwatch:"));
+            DiscordMessage m = await ctx.RespondAsync("processing request, standby...");
+            uint parsedAllyCode, sd;
+
+            int i = 0;
+            foreach (string s in ignoredCodes)
+            {
+                if (s.Contains("-"))
+                {
+                    parsedAllycodes[i] = commandFunctions.parseAllycode(s.Replace("-", ""));
+                }
+                else
+                {
+                    if (UInt32.TryParse(s, out sd))
+                    {
+                        parsedAllycodes[i] = commandFunctions.parseAllycode(sd.ToString());
+                    }
+                    else
+                    {
+                        await ctx.RespondAsync($"{s} is not a valid allycode");
+                    }
+                }
+                i++;
+            }
+            Console.WriteLine(parsedAllycodes.Length);
+            helper = commandFunctions.login();
+            uint userAlly = commandFunctions.parseAllycode(commandFunctions.checkRegistered(ctx.Member.Id.ToString()));
+            await m.ModifyAsync("acquired allycode(s)");
+            if ((parsedAllycodes.Length > 0))
+            {
+                //uint code = parseAllycode(allycode);
+                JObject toons;
+                DataHelper dh = new DataHelper(ctx);
+                await m.ModifyAsync(m.Content + "\n\nRetirieving Guild");
+                GuildParse.Guild g = dh.getGuild(new uint[] { userAlly }, helper);
+                String guildID = getGuildID(ctx.Member.Id.ToString());
+                //CharacterDefID d = new CharacterDefID();
+                JObject users;
+                JArray user;
+                String userID = ctx.Member.Id.ToString();
+                String toonName = "";
+                try
+                {
+                    bool added = false, guildFound = false, inGuild = false;
+                    //if file exists, parse it
+                    await m.ModifyAsync("Comparing to roster");
+                    Console.WriteLine("Reading File");
+                    users = JObject.Parse(File.ReadAllText(commandFunctions.detectOS() + @"Data/Ignore.txt"));
+                    user = (JArray)users["Guilds"];
+                    Console.WriteLine("Finding Guild");
+                    await m.ModifyAsync(m.Content + "\nChecking ignore list");
+                    foreach (JObject obj in user.Children())
+                    {
+                        if (obj.Property("ID").Value.ToString().Equals(guildID))
+                        {
+                            Console.WriteLine("Guild Found");
+                            guildFound = true;
+                            JArray ignored = (JArray)obj[$"Ignored"];
+                            if (ignored == null)
+                            {
+                                Console.WriteLine("Ignored List not found");
+                                ignored = new JArray();
+                                obj.Add($"Ignored", ignored);
+                            }
+                            else
+                            {
+                                Console.WriteLine("Ignored List found");
+                            }
+                            await m.ModifyAsync("ignore list found, checking against provided code(s)");
+                            foreach (uint code in parsedAllycodes)
+                            {
+                                if (code > 0)
+                                {
+                                    JObject j = (JObject)ignored.SelectToken($"$.[?(@.allycode=={code})]");
+                                    if (j == null)
+                                    {
+                                        Console.WriteLine($"{code} not in list");
+                                        JObject newToon = new JObject();
+                                        newToon.Add("allycode", code);
+                                        foreach (GuildParse.Roster r in g.guild[0].Roster)
+                                        {
+                                            if (code.ToString().Equals(r.AllyCode.ToString())) { newToon.Add("name", r.Name); inGuild = true; }
+                                        }
+                                        if (inGuild)
+                                        {
+                                            ignored.Add(newToon);
+                                            dh.logCommandInfo($"{ctx.Member.DisplayName} added {code} to {g.guild[0].Id.ToString()} Ignore List");
+                                            await ctx.RespondAsync($"{code} has been added to your Ignore List");
+                                            inGuild = false;
+                                        }
+                                        else
+                                        {
+                                            await ctx.RespondAsync($"{code} is not in your guild");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        await ctx.RespondAsync($"{code} was already in your Ignore List");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (!guildFound)
+                    {
+                        JObject guild = new JObject();
+                        guild.Add("ID", g.guild[0].Id.ToString());
+                        user.Add(guild);
+                        JArray ignored = new JArray();
+                        guild.Add("Ignored", ignored);
+                        JObject newIgnore = new JObject();
+                        foreach (uint code in parsedAllycodes)
+                        {
+                            newIgnore.Add("allycode", code);
+                            foreach (GuildParse.Roster r in g.guild[0].Roster)
+                            {
+                                if (code.ToString().Equals(r.AllyCode.ToString())) { newIgnore.Add("name", r.Name); }
+                            }
+                            ignored.Add(newIgnore);
+                        }
+                        //  File.WriteAllText((RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? "" : $@"C:\Users\jake\Documents\swgoh\SWGOH Prereqs\SWGOH Prereqs") + @"\Data\Ignore.txt", users.ToString());
+                    }
+                    /*else
+                    {
+                        if (added)
+                        {
+                          //  File.WriteAllText((RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? "" : $@"C:\Users\jake\Documents\swgoh\SWGOH Prereqs\SWGOH Prereqs") + @"\Data\Ignore.txt", users.ToString());
+                            //dh.logCommandInfo($"{ctx.Member.DisplayName} added {parsedAllyCode} to {g.guild[0].Id.ToString()} Ignore List");
+                            await ctx.RespondAsync($"{parsedAllyCode} has been added to your Ignore List");
+                        }
+                        else
+                            await ctx.RespondAsync($"{parsedAllyCode} was already in your Ignore List");
+                    }*/
+                    File.WriteAllText(commandFunctions.detectOS() + @"Data/Ignore.txt", users.ToString());
+                    await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":thumbsup:"));
+                    await m.DeleteAsync();
+                }
+                catch (FileNotFoundException fnfe)
+                {
+                    /* users = new JObject();
+                     user = new JArray();
+                     JObject guild = new JObject();
+                     guild.Add("ID", g.guild[0].Id.ToString());
+                     JArray ignored = new JArray();
+                     JObject ally = new JObject();
+                     ally.Add("allycode", parsedAllyCode);
+                     ignored.Add(ally);
+                     guild.Add("Ignored", ignored);
+                     user.Add(guild);
+                     users.Add("Guilds", user);
+                     File.WriteAllText((RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? "" : $@"C:\Users\jake\Documents\swgoh\SWGOH Prereqs\SWGOH Prereqs") + @"\Data\Ignore.txt", users.ToString());*/
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message + "::::" + e.StackTrace);
+                    await ctx.RespondAsync($"{allycode} not found");
+                }
+
+            }
+
+        }
+        #region TW Orders
+        [Command("two"), Description("Territory War Orders"), Hidden]
+        public async Task getOrders(CommandContext ctx)
+        {
+            DiscordMessage m = await ctx.RespondAsync("processing request, standby...");
+            string guildID = getGuildID(ctx.Member.Id.ToString());
+            JObject users;
+            JArray user;
+            String userID = ctx.Member.Id.ToString();
+            String toonName = "";
+
+            List<String> ignoredList = new List<string>();
+            await m.ModifyAsync("Checking Ignore List");
+            try
+            {
+                bool added = false, guildFound = false;
+                //if file exists, parse it
+                Console.WriteLine("Reading File");
+                users = JObject.Parse(File.ReadAllText(commandFunctions.detectOS() + @"Data/Ignore.txt"));
+                user = (JArray)users["Guilds"];
+                Console.WriteLine("Finding Guild");
+                foreach (JObject obj in user.Children())
+                {
+                    if (obj.Property("ID").Value.ToString().Equals(guildID))
+                    {
+                        Console.WriteLine("Guild Found");
+                        guildFound = true;
+                        JArray ignored = (JArray)obj[$"Ignored"];
+                        if (ignored != null)
+                        {
+                            Console.WriteLine("Ignored List found");
+                            foreach (JObject t in ignored.Children())
+                            {
+                                ignoredList.Add(t.Property("name").Value.ToString());
+                            }
+                        }
+                    }
+                }
+            }
+            catch (FileNotFoundException fnfe)
+            {
+
+            }
+
+            await m.ModifyAsync("Ignore list processed. Retrieving orders");
+            string[] Scopes = { SheetsService.Scope.SpreadsheetsReadonly };
+            string ApplicationName = "TW Orders";
+            UserCredential credential;
+
+            using (var stream =
+                new FileStream("credentials.json", FileMode.Open, FileAccess.Read))
+            {
+                // The file token.json stores the user's access and refresh tokens, and is created
+                // automatically when the authorization flow completes for the first time.
+                string credPath = "token.json";
+                credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                    GoogleClientSecrets.Load(stream).Secrets,
+                    Scopes,
+                    "user",
+                    CancellationToken.None,
+                    new FileDataStore(credPath, true)).Result;
+                Console.WriteLine("Credential file saved to: " + credPath);
+            }
+
+            // Create Google Sheets API service.
+            var service = new SheetsService(new BaseClientService.Initializer()
+            {
+                HttpClientInitializer = credential,
+                ApplicationName = ApplicationName,
+            });
+
+            // Define request parameters.
+            String spreadsheetId = "1Jrjn84StqflzVvS3DGXehke2jCDQfq7UJBJiZSNf0uY";
+            String range = "Sheet2!A2:Z";
+            SpreadsheetsResource.ValuesResource.GetRequest request =
+                    service.Spreadsheets.Values.Get(spreadsheetId, range);
+
+            // Prints the names and majors of students in a sample spreadsheet:
+            // https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
+            ValueRange response = request.Execute();
+            IList<IList<Object>> values = response.Values;
+            string assignments = "";
+            var embed = new DiscordEmbedBuilder
+            {
+                Title = "TW Comparison",
+                Color = new DiscordColor(0xFF0000) // red
+            };
+            DiscordRole dr = ctx.Guild.EveryoneRole;
+            foreach (var names in ctx.Guild.Roles)
+            {
+                if (names.Name.Equals("Ewoks"))
+                {
+                    dr = names;
+                }
+            }
+            await m.ModifyAsync("Orders found. Building Display");
+            string embeds = "", title = "";
+            Console.WriteLine(ctx.Guild.MemberCount);
+            IReadOnlyList<DiscordMember> mems = await ctx.Guild.GetAllMembersAsync();
+            foreach (var member in mems)
+            {
+                Console.WriteLine(member.Id);
+            }
+            if (values != null && values.Count > 0)
+            {
+                List<DiscordEmbedBuilder> indOrders = new List<DiscordEmbedBuilder>();
+                int i = 0;
+                foreach (var row in values)
+                {
+                    if (!ignoredList.Contains(row[0]))
+                    {
+                        embeds = "```diff\n";
+                        title = $"{row[0]} Assignments";
+
+                        int j = 0;
+                        embeds += $"{row[2]} Def Banners\n";
+                        embeds += "+ Defensive Squads\n";
+
+                        foreach (var assignment in row)
+                        {
+                            if (j != 0 && j != 1 && j != 2)
+                            {
+                                if (Regex.IsMatch(assignment.ToString(), @"\d{2,6}") || !Regex.IsMatch(assignment.ToString(), @"\d{1,1}") || Regex.IsMatch(assignment.ToString(), @"\b(\w*fleet defense\w*)\b"))
+                                {
+                                    embeds += "- ";
+                                }
+                                if (j != row.Count - 1)
+                                    embeds += assignment + "\n";
+                                else
+                                    embeds += assignment;
+                            }
+                            j++;
+                        }
+                        embeds += "```";
+                        try
+                        {
+                            foreach (var member in ctx.Guild.Members)
+                            {
+                                if (member.Id.ToString().Equals(row[1].ToString().Replace("<@", "").Replace("!", "").Replace(">", "")))
+                                {
+                                    var individualEmbed = new DiscordEmbedBuilder
+                                    {
+                                        Title = "TW Assignment",
+                                        Color = new DiscordColor(0xFF0000) // red
+                                    };
+                                    individualEmbed.AddField($"{title}", row[1] + "\n" + embeds);
+                                    indOrders.Add(individualEmbed);
+                                }
+                            }
+                            embed.AddField($"{title}", row[1] + "\n" + embeds, true);
+                        }
+                        catch
+                        {
+                            await ctx.RespondAsync(dr.Mention + " Here are the TW Assignments:", embed: embed);
+                            embed = new DiscordEmbedBuilder
+                            {
+                                Title = "",
+                                Color = new DiscordColor(0xFF0000) // red
+                            };
+                            embed.AddField($"{title}", row[1] + "\n" + embeds, true);
+                        }
+                        i++;
+                    }
+                }
+                String ignoredPlayers = "";
+                try
+                {
+                    foreach (string name in ignoredList) { ignoredPlayers += name + ","; }
+                    ignoredPlayers = ignoredPlayers.Substring(0, ignoredPlayers.Length - 1);
+                    embed.AddField($"Ignoring:", $"```{ignoredPlayers}```", false);
+                    await ctx.RespondAsync(embed: embed);
+                }
+                catch
+                {
+                    await ctx.RespondAsync(embed: embed);
+                    embed = new DiscordEmbedBuilder
+                    {
+                        Title = "",
+                        Color = new DiscordColor(0xFF0000) // red
+                    };
+                    embed.AddField($"Ignoring:", $"```{ignoredPlayers}```", false);
+                }
+                await m.DeleteAsync();
+                int DMs = 0;
+                foreach (DiscordEmbedBuilder emb in indOrders)
+                {
+                    foreach (var member in ctx.Guild.Members)
+                    {
+                        if (emb.Fields[0].Value.Contains(member.Id.ToString()))
+                        {
+                            try
+                            {
+                                await member.SendMessageAsync("", embed: emb);
+                                Thread.Sleep(750);
+                                DMs++;
+                            }
+                            catch { Console.WriteLine($"{member.DisplayName} broke the message"); }
+                        }
+                    }
+                }
+                Console.WriteLine($"{DMs} sent");
+            }
+        }
+
+        #endregion
+        [Command("twir"), Description("Remove a member from the TW ignore list.")]
+        public async Task TWremoveIgnore(CommandContext ctx, string allycode)
+        {
+            await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":stopwatch:"));
+            DiscordMessage m = await ctx.RespondAsync("processing request, standby...");
+            uint parsedAllyCode, sd;
+            if (allycode.Contains("-"))
+            {
+                parsedAllyCode = commandFunctions.parseAllycode(allycode);
+            }
+            else
+            {
+                if (UInt32.TryParse(allycode, out sd))
+                {
+                    parsedAllyCode = commandFunctions.parseAllycode(sd.ToString());
+                }
+                else
+                {
+                    parsedAllyCode = commandFunctions.parseAllycode(checkRegistered(ctx.Member.Id.ToString()));
+                }
+            }
+            helper = commandFunctions.login();
+            uint userAlly = commandFunctions.parseAllycode(checkRegistered(ctx.Member.Id.ToString()));
+            if (!(parsedAllyCode == 1))
+            {
+                //uint code = parseAllycode(allycode);
+                JObject toons;
+                DataHelper dh = new DataHelper(ctx);
+                //GuildParse.Guild g = dh.getGuild(new uint[] { userAlly }, helper);
+                //CharacterDefID d = new CharacterDefID();
+                string guildID = getGuildID(ctx.Member.Id.ToString());
+                JObject users;
+                JArray user;
+                String userID = ctx.Member.Id.ToString();
+                String toonName = "";
+                try
+                {
+                    bool added = false, guildFound = false;
+                    //if file exists, parse it
+                    Console.WriteLine("Reading File");
+                    users = JObject.Parse(File.ReadAllText(commandFunctions.detectOS() + @"Data/Ignore.txt"));
+                    user = (JArray)users["Guilds"];
+                    Console.WriteLine("Finding Guild");
+                    foreach (JObject obj in user.Children())
+                    {
+                        if (obj.Property("ID").Value.ToString().Equals(guildID))
+                        {
+                            Console.WriteLine("Guild Found");
+                            guildFound = true;
+                            JArray ignored = (JArray)obj[$"Ignored"];
+                            if (ignored != null)
+                            {
+                                Console.WriteLine("Ignored List found");
+                                JObject j = (JObject)ignored.SelectToken($"$.[?(@.allycode=='{parsedAllyCode}')]");
+                                if (j != null)
+                                {
+                                    ignored.Remove(j);
+                                    File.WriteAllText(commandFunctions.detectOS() + @"Data/Ignore.txt", users.ToString());
+                                    Console.WriteLine($"{parsedAllyCode} has been removed from the ignore list");
+                                    dh.logCommandInfo($"{ctx.Member.DisplayName} removed {parsedAllyCode} from {guildID} Ignore List");
+                                    await ctx.RespondAsync($"{parsedAllyCode} has been removed from your Ignore List");
+                                }
+                                else
+                                {
+                                    await ctx.RespondAsync($"{parsedAllyCode} was not found in your Ignore List");
+                                }
+                            }
+                            else
+                            {
+                                Console.WriteLine("Ignored Not found"); await ctx.RespondAsync($"{parsedAllyCode} was not found in your Ignore List");
+                            }
+                        }
+                    }
+                    await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":thumbsup:"));
+                    await m.DeleteAsync();
+                }
+                catch (FileNotFoundException fnfe)
+                {
+                    users = new JObject();
+                    user = new JArray();
+                    JObject guild = new JObject();
+                    guild.Add("ID", guildID);
+                    JArray ignored = new JArray();
+                    JObject ally = new JObject();
+                    ally.Add("allycode", parsedAllyCode);
+                    ignored.Add(ally);
+                    guild.Add("Ignored", ignored);
+                    user.Add(guild);
+                    users.Add("Guilds", user);
+                    File.WriteAllText(commandFunctions.detectOS() + @"Data/Ignore.txt", users.ToString());
+                }
+                catch (Exception e)
+                {
+                    await ctx.RespondAsync($"{parsedAllyCode} not found");
+                }
+
+            }
+
+        }
+        [Command("twic"), Description("Clear all allycodes from the TW Ignore list.")]
+        public async Task TWremoveClear(CommandContext ctx)
+        {
+            await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":stopwatch:"));
+            DiscordMessage m = await ctx.RespondAsync("processing request, standby...");
+            helper = commandFunctions.login();
+            uint userAlly = commandFunctions.parseAllycode(checkRegistered(ctx.Member.Id.ToString()));
+            DataHelper dh = new DataHelper(ctx);
+            string guildID = getGuildID(ctx.Member.Id.ToString());
+            JObject users;
+            JArray user;
+            String userID = ctx.Member.Id.ToString();
+            try
+            {
+                bool added = false, guildFound = false;
+                //if file exists, parse it
+                Console.WriteLine("Reading File");
+                users = JObject.Parse(File.ReadAllText(commandFunctions.detectOS() + @"Data/Ignore.txt"));
+                user = (JArray)users["Guilds"];
+                Console.WriteLine("Finding Guild");
+                foreach (JObject obj in user.Children())
+                {
+                    if (obj.Property("ID").Value.ToString().Equals(guildID))
+                    {
+                        Console.WriteLine("Guild Found");
+                        guildFound = true;
+                        JArray ignored = (JArray)obj[$"Ignored"];
+                        if (ignored != null)
+                        {
+                            Console.WriteLine("Ignored List found");
+                            obj.Remove("Ignored");
+                            File.WriteAllText(commandFunctions.detectOS() + @"Data/Ignore.txt", users.ToString());
+                            Console.WriteLine("Ignored List Cleared"); await ctx.RespondAsync($"Your ignore list has been cleared");
+                        }
+                        else
+                        {
+                            Console.WriteLine("Ignored Not found"); await ctx.RespondAsync($"Your ignore list was already empty");
+                        }
+                    }
+                }
+                await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":thumbsup:"));
+                await m.DeleteAsync();
+            }
+            catch (FileNotFoundException fnfe)
+            {
+            }
+            catch (Exception e)
+            {
+            }
+        }
+        [Command("twil"), Description("Show the TW Ignore list")]
+        public async Task TWIgnoreList(CommandContext ctx)
+        {
+            await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":stopwatch:"));
+            DiscordMessage m = await ctx.RespondAsync("processing request, standby...");
+            helper = commandFunctions.login();
+            uint userAlly = commandFunctions.parseAllycode(checkRegistered(ctx.Member.Id.ToString()));
+
+            JObject toons;
+            DataHelper dh = new DataHelper(ctx);
+            string guildID = getGuildID(ctx.Member.Id.ToString());
+            JObject users;
+            JArray user;
+            String userID = ctx.Member.Id.ToString();
+            String ignoreList = "";
+            try
+            {
+                bool added = false, guildFound = false;
+                //if file exists, parse it
+                Console.WriteLine("Reading File");
+                users = JObject.Parse(File.ReadAllText(commandFunctions.detectOS() + @"Data/Ignore.txt"));
+                user = (JArray)users["Guilds"];
+                Console.WriteLine("Finding Guild");
+                foreach (JObject obj in user.Children())
+                {
+                    if (obj.Property("ID").Value.ToString().Equals(guildID))
+                    {
+                        Console.WriteLine("Guild Found");
+                        guildFound = true;
+                        JArray ignored = (JArray)obj[$"Ignored"];
+                        if (ignored != null)
+                        {
+                            if (ignored.Count > 0)
+                            {
+                                Console.WriteLine("Ignored List found");
+                                foreach (JObject ignoree in ignored.Children())
+                                {
+                                    Console.WriteLine("AllyCode: " + ignoree["allycode"]);
+                                    ignoreList += $"{ignoree["name"]} - {ignoree["allycode"]}\n\n";
+                                }
+                            }
+                        }
+                        else
+                        {
+                            await ctx.RespondAsync(ctx.Member.Mention + "You haven't ignored anyone yet");
+                        }
+                        break;
+                    }
+                }
+
+
+
+                await m.DeleteAsync();
+                if (ignoreList.Length > 0)
+                {
+                    await ctx.RespondAsync(ctx.Member.Mention + " Here is your TW ignore List:\n" + ignoreList);
+                    await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":thumbsup:"));
+                }
+            }
+            catch (FileNotFoundException fnfe)
+            {
+                /* users = new JObject();
+                  user = new JArray();
+                  JObject guild = new JObject();
+                  guild.Add("ID", g.guild[0].Id.ToString());
+                  JArray ignored = new JArray();
+                  JObject ally = new JObject();
+                  ally.Add("allycode", allycode);
+                  ignored.Add(ally);
+                  guild.Add("Ignored", ignored);
+                  user.Add(guild);
+                  users.Add("Guilds", user);
+                  File.WriteAllText($@"C:\Users\jake\Documents\swgoh\SWGOH Prereqs\SWGOH Prereqs\Data\Ignore.txt", users.ToString());*/
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.StackTrace);
+            }
+        }
         #region GA Compare Logic
         [Command("gac"), Description("Compare 2 players for GAC")]
         public async Task getGAC(CommandContext ctx, [Description("Ally Code to lookup")] string allycode1, string allycode2 = "")
@@ -973,13 +1648,13 @@ namespace SWGOH
             uint parsedAllyCode1 = 1, parsedAllyCode2 = 1;
             if (allycode2.Equals(""))
             {
-                parsedAllyCode2 = parseAllycode(checkRegistered(ctx.Member.Id.ToString()));
-                parsedAllyCode1 = checkAllycode(ctx, allycode1);
+                parsedAllyCode2 = commandFunctions.parseAllycode(checkRegistered(ctx.Member.Id.ToString()));
+                parsedAllyCode1 = commandFunctions.checkAllycode(ctx, allycode1);
             }
             else
             {
-                parsedAllyCode1 = checkAllycode(ctx, allycode1);
-                parsedAllyCode2 = checkAllycode(ctx, allycode2);
+                parsedAllyCode1 = commandFunctions.checkAllycode(ctx, allycode1);
+                parsedAllyCode2 = commandFunctions.checkAllycode(ctx, allycode2);
             }
             if ((!(parsedAllyCode1 == 1) && !(parsedAllyCode2 == 1)))
             {
@@ -988,7 +1663,7 @@ namespace SWGOH
                 var interactivity = ctx.Client.GetInteractivityModule();
                 String s = "", title = "", embeds = "";
                 DataHelper dh = new DataHelper(ctx);
-                login();
+                helper = commandFunctions.login();
                 var embed = new DiscordEmbedBuilder
                 {
                     Title = "GA Comparison",
@@ -1116,7 +1791,7 @@ namespace SWGOH
                 DiscordMessage m = await ctx.RespondAsync("processing request, standby...");
                 bool found = false;
                 //if file exists, parse it
-                users = JObject.Parse(File.ReadAllText(detectOS() + @"Data\users.txt"));
+                users = JObject.Parse(File.ReadAllText(commandFunctions.detectOS() + @"Data\users.txt"));
                 user = (JArray)users["users"];
                 foreach (JObject obj in user.Children())
                 {
@@ -1129,7 +1804,7 @@ namespace SWGOH
                 }
                 if (found)
                 {
-                    File.WriteAllText(detectOS() + @"Data\users.txt", users.ToString());
+                    File.WriteAllText(commandFunctions.detectOS() + @"Data\users.txt", users.ToString());
                     await ctx.RespondAsync($"<@{userID}> has unregistered. Register with a new allycode using ```;;r allycode```");
                 }
                 else
@@ -1159,7 +1834,7 @@ namespace SWGOH
                 GuildParse.Guild g = dh.getGuild(new uint[] { allycode }, helper);
                 dh.logCommandInfo($"{ctx.Member} registering {allycode}");
                 //if file exists, parse it
-                users = JObject.Parse(File.ReadAllText(detectOS() + @"Data\users.txt"));
+                users = JObject.Parse(File.ReadAllText(commandFunctions.detectOS() + @"Data\users.txt"));
                 dh.logCommandInfo($"Checking for existing registration");
                 user = (JArray)users["users"];
                 foreach (JObject obj in user.Children())
@@ -1179,7 +1854,7 @@ namespace SWGOH
                 {
                     if (addUser(user, allycode, ctx.Member.Id.ToString(), g.guild[0].Id))
                     {
-                        File.WriteAllText(detectOS() + @"Data\users.txt", users.ToString());
+                        File.WriteAllText(commandFunctions.detectOS() + @"Data\users.txt", users.ToString());
                         await ctx.RespondAsync("<@" + ctx.Member.Id.ToString() + "> has  been registered to " + allycode + ". If you want to change your allycode, please unregister and register again with the new allycode.");
                         dh.logCommandInfo($"{ctx.Member} registered to{allycode}");
                     }
@@ -1197,7 +1872,7 @@ namespace SWGOH
                 GuildParse.Guild g = dh.getGuild(new uint[] { allycode }, helper);
                 if (addUser(user, allycode, ctx.Member.Id.ToString(), g.guild[0].Id))
                 {
-                    File.WriteAllText(detectOS() + @"Data\users.txt", users.ToString());
+                    File.WriteAllText(commandFunctions.detectOS() + @"Data\users.txt", users.ToString());
                     await ctx.RespondAsync("<@" + ctx.Member.Id.ToString() + "> has  been registered to " + allycode + ". If you want to change your allycode, please unregister and register again with the new allycode.");
                 }
                 else
@@ -1206,7 +1881,7 @@ namespace SWGOH
         }
         public bool addUser(JArray arr, uint allycode, string userID, string guildID)
         {
-            if (parseAllycode(allycode.ToString()) > 99999)
+            if (commandFunctions.parseAllycode(allycode.ToString()) > 99999)
             {
                 //Create new user
                 JObject newUser = new JObject();
@@ -1247,7 +1922,7 @@ namespace SWGOH
             JArray user;
             bool found = false;
             Console.WriteLine("Checking users...");
-            users = JObject.Parse(File.ReadAllText(detectOS() + @"Data/users.txt"));
+            users = JObject.Parse(File.ReadAllText(commandFunctions.detectOS() + @"Data/users.txt"));
             user = (JArray)users["users"];
             foreach (JObject obj in user.Children())
             {
@@ -1265,7 +1940,7 @@ namespace SWGOH
             JArray user;
             bool found = false;
             Console.WriteLine("Checking users...");
-            users = JObject.Parse(File.ReadAllText(detectOS() + @"Data/users.txt"));
+            users = JObject.Parse(File.ReadAllText(commandFunctions.detectOS() + @"Data/users.txt"));
             user = (JArray)users["users"];
             foreach (JObject obj in user.Children())
             {
@@ -1315,7 +1990,7 @@ namespace SWGOH
             {
                 bool added = false;
                 //if file exists, parse it
-                users = JObject.Parse(File.ReadAllText(detectOS() + @"Data/users.txt"));
+                users = JObject.Parse(File.ReadAllText(commandFunctions.detectOS() + @"Data/users.txt"));
                 user = (JArray)users["users"];
                 Console.WriteLine("Finding user");
                 foreach (JObject obj in user.Children())
@@ -1351,7 +2026,7 @@ namespace SWGOH
             {
                 bool added = false;
                 //if file exists, parse it
-                users = JObject.Parse(File.ReadAllText(detectOS() + @"Data/users.txt"));
+                users = JObject.Parse(File.ReadAllText(commandFunctions.detectOS() + @"Data/users.txt"));
                 user = (JArray)users["users"];
                 toonName = d.toonsList[toon];
                 Console.WriteLine("Finding user");
@@ -1380,7 +2055,7 @@ namespace SWGOH
                 }
                 if (added)
                 {
-                    File.WriteAllText(detectOS() + @"Data/users.txt", users.ToString());
+                    File.WriteAllText(commandFunctions.detectOS() + @"Data/users.txt", users.ToString());
                     dh.logCommandInfo($"{ctx.Member.DisplayName} added {toonName} to their {mode} Toon List");
                     await ctx.RespondAsync($"{toon} has been added to your {mode} Toon List");
                 }
@@ -1405,7 +2080,7 @@ namespace SWGOH
             {
                 bool removed = false;
                 //if file exists, parse it
-                users = JObject.Parse(File.ReadAllText(detectOS() + @"Data/users.txt"));
+                users = JObject.Parse(File.ReadAllText(commandFunctions.detectOS() + @"Data/users.txt"));
                 user = (JArray)users["users"];
                 toonName = d.toonsList[toon];
                 Console.WriteLine("Finding user");
@@ -1426,7 +2101,7 @@ namespace SWGOH
                 }
                 if (removed)
                 {
-                    File.WriteAllText(detectOS() + @"Data/users.txt", users.ToString());
+                    File.WriteAllText(commandFunctions.detectOS() + @"Data/users.txt", users.ToString());
                     dh.logCommandInfo($"{ctx.Member.Nickname} removed {toonName} from their {mode} Toon List");
                     await ctx.RespondAsync($"{toon} has been removed from your {mode} Toon List");
                 }
@@ -1464,16 +2139,16 @@ namespace SWGOH
                 Title = $"Toon Comparison",
                 Color = new DiscordColor(0xFF0000) // red
             };
-            login();
+            helper = commandFunctions.login();
             if (allycode2.Equals(""))
             {
-                parsedAllyCode2 = parseAllycode(checkRegistered(ctx.Member.Id.ToString()));
-                parsedAllyCode1 = checkAllycode(ctx, allycode);
+                parsedAllyCode2 = commandFunctions.parseAllycode(checkRegistered(ctx.Member.Id.ToString()));
+                parsedAllyCode1 = commandFunctions.checkAllycode(ctx, allycode);
             }
             else
             {
-                parsedAllyCode1 = checkAllycode(ctx, allycode);
-                parsedAllyCode2 = checkAllycode(ctx, allycode2);
+                parsedAllyCode1 = commandFunctions.checkAllycode(ctx, allycode);
+                parsedAllyCode2 = commandFunctions.checkAllycode(ctx, allycode2);
             }
             try
             {
@@ -1584,7 +2259,7 @@ namespace SWGOH
         public async Task readlist(CommandContext ctx)
         {
             JObject toons;
-            toons = JObject.Parse(File.ReadAllText(detectOS() + @"Data\toons.txt"));
+            toons = JObject.Parse(File.ReadAllText(commandFunctions.detectOS() + @"Data\toons.txt"));
             Console.WriteLine(Directory.GetCurrentDirectory());
             //readToons(ctx);
             //readToonsList(ctx);
@@ -1598,7 +2273,7 @@ namespace SWGOH
             try
             {
                 //if file exists, parse it
-                toons = JObject.Parse(File.ReadAllText(detectOS() + @"Data/defID.txt"));
+                toons = JObject.Parse(File.ReadAllText(commandFunctions.detectOS() + @"Data/defID.txt"));
 
                 foreach (JObject j in toons.Children())
                 {
@@ -1621,7 +2296,7 @@ namespace SWGOH
             {
                 Console.WriteLine("Checking values");
                 //if file exists, parse it
-                toons = JObject.Parse(File.ReadAllText(detectOS() + @"Data/toons.txt"));
+                toons = JObject.Parse(File.ReadAllText(commandFunctions.detectOS() + @"Data/toons.txt"));
 
                 /*  List<TempObject> resultset = new List<TempObject>();
                   foreach (JProperty j in toons.Children())
@@ -1690,577 +2365,13 @@ namespace SWGOH
             catch (Exception e) { Console.WriteLine(e.Message); }
 
         }
-        [Command("twi"), Description("Add a guild member to the ignore list for TW. This list is set for the guild, NOT the user.")]
-        public async Task TWignore(CommandContext ctx, [RemainingText] string allycode)
-        {
-            Console.WriteLine(RuntimeInformation.IsOSPlatform(OSPlatform.Linux));
-            string[] ignoredCodes;
-            uint[] parsedAllycodes;
-            try
-            {
-                ignoredCodes = allycode.Split(' ');
-                parsedAllycodes = new uint[ignoredCodes.Length];
-            }
-            catch (Exception e) { Console.WriteLine(e.Message); ignoredCodes = new string[1]; ignoredCodes[0] = allycode; parsedAllycodes = new uint[ignoredCodes.Length]; }
-            Console.WriteLine(ignoredCodes.Length);
-            await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":stopwatch:"));
-            DiscordMessage m = await ctx.RespondAsync("processing request, standby...");
-            uint parsedAllyCode, sd;
 
-            int i = 0;
-            foreach (string s in ignoredCodes)
-            {
-                if (s.Contains("-"))
-                {
-                    parsedAllycodes[i] = parseAllycode(s.Replace("-", ""));
-                }
-                else
-                {
-                    if (UInt32.TryParse(s, out sd))
-                    {
-                        parsedAllycodes[i] = parseAllycode(sd.ToString());
-                    }
-                    else
-                    {
-                        await ctx.RespondAsync($"{s} is not a valid allycode");
-                    }
-                }
-                i++;
-            }
-            Console.WriteLine(parsedAllycodes.Length);
-            login();
-            uint userAlly = parseAllycode(checkRegistered(ctx.Member.Id.ToString()));
-            await m.ModifyAsync("acquired allycode(s)");
-            if ((parsedAllycodes.Length > 0))
-            {
-                //uint code = parseAllycode(allycode);
-                JObject toons;
-                DataHelper dh = new DataHelper(ctx);
-                await m.ModifyAsync(m.Content + "\n\nRetirieving Guild");
-                GuildParse.Guild g = dh.getGuild(new uint[] { userAlly }, helper);
-                String guildID = getGuildID(ctx.Member.Id.ToString());
-                //CharacterDefID d = new CharacterDefID();
-                JObject users;
-                JArray user;
-                String userID = ctx.Member.Id.ToString();
-                String toonName = "";
-                try
-                {
-                    bool added = false, guildFound = false, inGuild = false;
-                    //if file exists, parse it
-                    await m.ModifyAsync("Comparing to roster");
-                    Console.WriteLine("Reading File");
-                    users = JObject.Parse(File.ReadAllText(detectOS() + @"Data/Ignore.txt"));
-                    user = (JArray)users["Guilds"];
-                    Console.WriteLine("Finding Guild");
-                    await m.ModifyAsync(m.Content + "\nChecking ignore list");
-                    foreach (JObject obj in user.Children())
-                    {
-                        if (obj.Property("ID").Value.ToString().Equals(guildID))
-                        {
-                            Console.WriteLine("Guild Found");
-                            guildFound = true;
-                            JArray ignored = (JArray)obj[$"Ignored"];
-                            if (ignored == null)
-                            {
-                                Console.WriteLine("Ignored List not found");
-                                ignored = new JArray();
-                                obj.Add($"Ignored", ignored);
-                            }
-                            else
-                            {
-                                Console.WriteLine("Ignored List found");
-                            }
-                            await m.ModifyAsync("ignore list found, checking against provided code(s)");
-                            foreach (uint code in parsedAllycodes)
-                            {
-                                if (code > 0)
-                                {
-                                    JObject j = (JObject)ignored.SelectToken($"$.[?(@.allycode=={code})]");
-                                    if (j == null)
-                                    {
-                                        Console.WriteLine($"{code} not in list");
-                                        JObject newToon = new JObject();
-                                        newToon.Add("allycode", code);
-                                        foreach (GuildParse.Roster r in g.guild[0].Roster)
-                                        {
-                                            if (code.ToString().Equals(r.AllyCode.ToString())) { newToon.Add("name", r.Name); inGuild = true; }
-                                        }
-                                        if (inGuild)
-                                        {
-                                            ignored.Add(newToon);
-                                            dh.logCommandInfo($"{ctx.Member.DisplayName} added {code} to {g.guild[0].Id.ToString()} Ignore List");
-                                            await ctx.RespondAsync($"{code} has been added to your Ignore List");
-                                            inGuild = false;
-                                        }
-                                        else
-                                        {
-                                            await ctx.RespondAsync($"{code} is not in your guild");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        await ctx.RespondAsync($"{code} was already in your Ignore List");
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    if (!guildFound)
-                    {
-                        JObject guild = new JObject();
-                        guild.Add("ID", g.guild[0].Id.ToString());
-                        user.Add(guild);
-                        JArray ignored = new JArray();
-                        guild.Add("Ignored", ignored);
-                        JObject newIgnore = new JObject();
-                        foreach (uint code in parsedAllycodes)
-                        {
-                            newIgnore.Add("allycode", code);
-                            foreach (GuildParse.Roster r in g.guild[0].Roster)
-                            {
-                                if (code.ToString().Equals(r.AllyCode.ToString())) { newIgnore.Add("name", r.Name); }
-                            }
-                            ignored.Add(newIgnore);
-                        }
-                        //  File.WriteAllText((RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? "" : $@"C:\Users\jake\Documents\swgoh\SWGOH Prereqs\SWGOH Prereqs") + @"\Data\Ignore.txt", users.ToString());
-                    }
-                    /*else
-                    {
-                        if (added)
-                        {
-                          //  File.WriteAllText((RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? "" : $@"C:\Users\jake\Documents\swgoh\SWGOH Prereqs\SWGOH Prereqs") + @"\Data\Ignore.txt", users.ToString());
-                            //dh.logCommandInfo($"{ctx.Member.DisplayName} added {parsedAllyCode} to {g.guild[0].Id.ToString()} Ignore List");
-                            await ctx.RespondAsync($"{parsedAllyCode} has been added to your Ignore List");
-                        }
-                        else
-                            await ctx.RespondAsync($"{parsedAllyCode} was already in your Ignore List");
-                    }*/
-                    File.WriteAllText(detectOS() + @"Data/Ignore.txt", users.ToString());
-                    await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":thumbsup:"));
-                    await m.DeleteAsync();
-                }
-                catch (FileNotFoundException fnfe)
-                {
-                    /* users = new JObject();
-                     user = new JArray();
-                     JObject guild = new JObject();
-                     guild.Add("ID", g.guild[0].Id.ToString());
-                     JArray ignored = new JArray();
-                     JObject ally = new JObject();
-                     ally.Add("allycode", parsedAllyCode);
-                     ignored.Add(ally);
-                     guild.Add("Ignored", ignored);
-                     user.Add(guild);
-                     users.Add("Guilds", user);
-                     File.WriteAllText((RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? "" : $@"C:\Users\jake\Documents\swgoh\SWGOH Prereqs\SWGOH Prereqs") + @"\Data\Ignore.txt", users.ToString());*/
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.Message + "::::" + e.StackTrace);
-                    await ctx.RespondAsync($"{allycode} not found");
-                }
-
-            }
-
-        }
-        #region TW Orders
-        [Command("two"), Description("Territory War Orders"), Hidden]
-        public async Task getOrders(CommandContext ctx)
-        {
-            string guildID = getGuildID(ctx.Member.Id.ToString());
-            JObject users;
-            JArray user;
-            String userID = ctx.Member.Id.ToString();
-            String toonName = "";
-            List<String> ignoredList = new List<string>();
-            try
-            {
-                bool added = false, guildFound = false;
-                //if file exists, parse it
-                Console.WriteLine("Reading File");
-                users = JObject.Parse(File.ReadAllText(detectOS() + @"Data/Ignore.txt"));
-                user = (JArray)users["Guilds"];
-                Console.WriteLine("Finding Guild");
-                foreach (JObject obj in user.Children())
-                {
-                    if (obj.Property("ID").Value.ToString().Equals(guildID))
-                    {
-                        Console.WriteLine("Guild Found");
-                        guildFound = true;
-                        JArray ignored = (JArray)obj[$"Ignored"];
-                        if (ignored != null)
-                        {
-                            Console.WriteLine("Ignored List found");
-                            foreach (JObject t in ignored.Children())
-                            {
-                                ignoredList.Add(t.Property("name").Value.ToString());
-                            }
-                        }
-                    }
-                }
-            }
-            catch (FileNotFoundException fnfe)
-            {
-
-            }
-
-
-            string[] Scopes = { SheetsService.Scope.SpreadsheetsReadonly };
-            string ApplicationName = "TW Orders";
-            UserCredential credential;
-
-            using (var stream =
-                new FileStream("credentials.json", FileMode.Open, FileAccess.Read))
-            {
-                // The file token.json stores the user's access and refresh tokens, and is created
-                // automatically when the authorization flow completes for the first time.
-                string credPath = "token.json";
-                credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
-                    GoogleClientSecrets.Load(stream).Secrets,
-                    Scopes,
-                    "user",
-                    CancellationToken.None,
-                    new FileDataStore(credPath, true)).Result;
-                Console.WriteLine("Credential file saved to: " + credPath);
-            }
-
-            // Create Google Sheets API service.
-            var service = new SheetsService(new BaseClientService.Initializer()
-            {
-                HttpClientInitializer = credential,
-                ApplicationName = ApplicationName,
-            });
-
-            // Define request parameters.
-            String spreadsheetId = "1Jrjn84StqflzVvS3DGXehke2jCDQfq7UJBJiZSNf0uY";
-            String range = "Sheet2!A2:Z";
-            SpreadsheetsResource.ValuesResource.GetRequest request =
-                    service.Spreadsheets.Values.Get(spreadsheetId, range);
-
-            // Prints the names and majors of students in a sample spreadsheet:
-            // https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
-            ValueRange response = request.Execute();
-            IList<IList<Object>> values = response.Values;
-            string assignments = "";
-            var embed = new DiscordEmbedBuilder
-            {
-                Title = "TW Comparison",
-                Color = new DiscordColor(0xFF0000) // red
-            };
-            DiscordRole dr = ctx.Guild.EveryoneRole;
-            foreach (var names in ctx.Guild.Roles)
-            {
-                if (names.Name.Equals("Ewoks"))
-                {
-                    dr = names;
-                }
-            }
-
-            string embeds = "", title = "";
-            if (values != null && values.Count > 0)
-            {
-                int i = 0;
-                foreach (var row in values)
-                {
-                    if (!ignoredList.Contains(row[0]))
-                    {
-                        embeds = "```diff\n";
-                        title = $"{row[0]} Assignments";
-
-                        int j = 0;
-                        embeds += $"{row[2]} Def Banners\n";
-                        embeds += "+ Defensive Squads\n";
-
-                        foreach (var assignment in row)
-                        {
-                            if (j != 0 && j != 1 && j != 2)
-                            {
-                                if (Regex.IsMatch(assignment.ToString(), @"\d{2,6}") || !Regex.IsMatch(assignment.ToString(), @"\d{1,1}") || Regex.IsMatch(assignment.ToString(), @"\b(\w*fleet defense\w*)\b"))
-                                {
-                                    embeds += "- ";
-                                }
-                                if (j != row.Count - 1)
-                                    embeds += assignment + "\n";
-                                else
-                                    embeds += assignment;
-                            }
-                            j++;
-                        }
-                        embeds += "```";
-                        try
-                        {
-                            foreach (var member in ctx.Guild.Members)
-                            {
-                                if (member.Id.ToString().Equals(row[1].ToString().Replace("<@", "").Replace("!", "").Replace(">", "")))
-                                {
-                                    var individualEmbed = new DiscordEmbedBuilder
-                                    {
-                                        Title = "TW Assignment",
-                                        Color = new DiscordColor(0xFF0000) // red
-                                    };
-                                    individualEmbed.AddField($"{title}", embeds);
-                                    await member.SendMessageAsync("", embed: individualEmbed);
-                                }
-                            }
-                            embed.AddField($"{title}", row[1] + "\n" + embeds, true);
-                        }
-                        catch
-                        {
-                            await ctx.RespondAsync(dr.Mention + " Here are the TW Assignments:", embed: embed);
-                            embed = new DiscordEmbedBuilder
-                            {
-                                Title = "TW Comparison",
-                                Color = new DiscordColor(0xFF0000) // red
-                            };
-                            embed.AddField($"{title}", row[1] + "\n" + embeds, true);
-                        }
-                        i++;
-                    }
-                }
-                String ignoredPlayers = "";
-                foreach (string name in ignoredList) { ignoredPlayers += name + ","; }
-                ignoredPlayers = ignoredPlayers.Substring(0, ignoredPlayers.Length - 1);
-                embed.AddField($"Ignoring:", $"```{ignoredPlayers}```", false);
-                await ctx.RespondAsync(embed: embed);
-            }
-        }
-        #endregion
-        [Command("twir"), Description("Remove a member from the TW ignore list.")]
-        public async Task TWremoveIgnore(CommandContext ctx, string allycode)
-        {
-            await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":stopwatch:"));
-            DiscordMessage m = await ctx.RespondAsync("processing request, standby...");
-            uint parsedAllyCode, sd;
-            if (allycode.Contains("-"))
-            {
-                parsedAllyCode = parseAllycode(allycode);
-            }
-            else
-            {
-                if (UInt32.TryParse(allycode, out sd))
-                {
-                    parsedAllyCode = parseAllycode(sd.ToString());
-                }
-                else
-                {
-                    parsedAllyCode = parseAllycode(checkRegistered(ctx.Member.Id.ToString()));
-                }
-            }
-            login();
-            uint userAlly = parseAllycode(checkRegistered(ctx.Member.Id.ToString()));
-            if (!(parsedAllyCode == 1))
-            {
-                //uint code = parseAllycode(allycode);
-                JObject toons;
-                DataHelper dh = new DataHelper(ctx);
-                //GuildParse.Guild g = dh.getGuild(new uint[] { userAlly }, helper);
-                //CharacterDefID d = new CharacterDefID();
-                string guildID = getGuildID(ctx.Member.Id.ToString());
-                JObject users;
-                JArray user;
-                String userID = ctx.Member.Id.ToString();
-                String toonName = "";
-                try
-                {
-                    bool added = false, guildFound = false;
-                    //if file exists, parse it
-                    Console.WriteLine("Reading File");
-                    users = JObject.Parse(File.ReadAllText(detectOS() + @"Data/Ignore.txt"));
-                    user = (JArray)users["Guilds"];
-                    Console.WriteLine("Finding Guild");
-                    foreach (JObject obj in user.Children())
-                    {
-                        if (obj.Property("ID").Value.ToString().Equals(guildID))
-                        {
-                            Console.WriteLine("Guild Found");
-                            guildFound = true;
-                            JArray ignored = (JArray)obj[$"Ignored"];
-                            if (ignored != null)
-                            {
-                                Console.WriteLine("Ignored List found");
-                                JObject j = (JObject)ignored.SelectToken($"$.[?(@.allycode=='{parsedAllyCode}')]");
-                                if (j != null)
-                                {
-                                    ignored.Remove(j);
-                                    File.WriteAllText(detectOS() + @"Data/Ignore.txt", users.ToString());
-                                    Console.WriteLine($"{parsedAllyCode} has been removed from the ignore list");
-                                    dh.logCommandInfo($"{ctx.Member.DisplayName} removed {parsedAllyCode} from {guildID} Ignore List");
-                                    await ctx.RespondAsync($"{parsedAllyCode} has been removed from your Ignore List");
-                                }
-                                else
-                                {
-                                    await ctx.RespondAsync($"{parsedAllyCode} was not found in your Ignore List");
-                                }
-                            }
-                            else
-                            {
-                                Console.WriteLine("Ignored Not found"); await ctx.RespondAsync($"{parsedAllyCode} was not found in your Ignore List");
-                            }
-                        }
-                    }
-                    await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":thumbsup:"));
-                    await m.DeleteAsync();
-                }
-                catch (FileNotFoundException fnfe)
-                {
-                    users = new JObject();
-                    user = new JArray();
-                    JObject guild = new JObject();
-                    guild.Add("ID", guildID);
-                    JArray ignored = new JArray();
-                    JObject ally = new JObject();
-                    ally.Add("allycode", parsedAllyCode);
-                    ignored.Add(ally);
-                    guild.Add("Ignored", ignored);
-                    user.Add(guild);
-                    users.Add("Guilds", user);
-                    File.WriteAllText(detectOS() + @"Data/Ignore.txt", users.ToString());
-                }
-                catch (Exception e)
-                {
-                    await ctx.RespondAsync($"{parsedAllyCode} not found");
-                }
-
-            }
-
-        }
-        [Command("twic"), Description("Clear all allycodes from the TW Ignore list.")]
-        public async Task TWremoveClear(CommandContext ctx)
-        {
-            await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":stopwatch:"));
-            DiscordMessage m = await ctx.RespondAsync("processing request, standby...");
-            login();
-            uint userAlly = parseAllycode(checkRegistered(ctx.Member.Id.ToString()));
-            DataHelper dh = new DataHelper(ctx);
-            string guildID = getGuildID(ctx.Member.Id.ToString());
-            JObject users;
-            JArray user;
-            String userID = ctx.Member.Id.ToString();
-            try
-            {
-                bool added = false, guildFound = false;
-                //if file exists, parse it
-                Console.WriteLine("Reading File");
-                users = JObject.Parse(File.ReadAllText(detectOS() + @"Data/Ignore.txt"));
-                user = (JArray)users["Guilds"];
-                Console.WriteLine("Finding Guild");
-                foreach (JObject obj in user.Children())
-                {
-                    if (obj.Property("ID").Value.ToString().Equals(guildID))
-                    {
-                        Console.WriteLine("Guild Found");
-                        guildFound = true;
-                        JArray ignored = (JArray)obj[$"Ignored"];
-                        if (ignored != null)
-                        {
-                            Console.WriteLine("Ignored List found");
-                            obj.Remove("Ignored");
-                            File.WriteAllText(detectOS() + @"Data/Ignore.txt", users.ToString());
-                            Console.WriteLine("Ignored List Cleared"); await ctx.RespondAsync($"Your ignore list has been cleared");
-                        }
-                        else
-                        {
-                            Console.WriteLine("Ignored Not found"); await ctx.RespondAsync($"Your ignore list was already empty");
-                        }
-                    }
-                }
-                await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":thumbsup:"));
-                await m.DeleteAsync();
-            }
-            catch (FileNotFoundException fnfe)
-            {
-            }
-            catch (Exception e)
-            {
-            }
-        }
-        [Command("twil"), Description("Show the TW Ignore list")]
-        public async Task TWIgnoreList(CommandContext ctx)
-        {
-            await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":stopwatch:"));
-            DiscordMessage m = await ctx.RespondAsync("processing request, standby...");
-            login();
-            uint userAlly = parseAllycode(checkRegistered(ctx.Member.Id.ToString()));
-
-            JObject toons;
-            DataHelper dh = new DataHelper(ctx);
-            string guildID = getGuildID(ctx.Member.Id.ToString());
-            JObject users;
-            JArray user;
-            String userID = ctx.Member.Id.ToString();
-            String ignoreList = "";
-            try
-            {
-                bool added = false, guildFound = false;
-                //if file exists, parse it
-                Console.WriteLine("Reading File");
-                users = JObject.Parse(File.ReadAllText(detectOS() + @"Data/Ignore.txt"));
-                user = (JArray)users["Guilds"];
-                Console.WriteLine("Finding Guild");
-                foreach (JObject obj in user.Children())
-                {
-                    if (obj.Property("ID").Value.ToString().Equals(guildID))
-                    {
-                        Console.WriteLine("Guild Found");
-                        guildFound = true;
-                        JArray ignored = (JArray)obj[$"Ignored"];
-                        if (ignored != null)
-                        {
-                            if (ignored.Count > 0)
-                            {
-                                Console.WriteLine("Ignored List found");
-                                foreach (JObject ignoree in ignored.Children())
-                                {
-                                    Console.WriteLine("AllyCode: " + ignoree["allycode"]);
-                                    ignoreList += $"{ignoree["name"]} - {ignoree["allycode"]}\n\n";
-                                }
-                            }
-                        }
-                        else
-                        {
-                            await ctx.RespondAsync(ctx.Member.Mention + "You haven't ignored anyone yet");
-                        }
-                        break;
-                    }
-                }
-
-
-
-                await m.DeleteAsync();
-                if (ignoreList.Length > 0)
-                {
-                    await ctx.RespondAsync(ctx.Member.Mention + " Here is your TW ignore List:\n" + ignoreList);
-                    await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":thumbsup:"));
-                }
-            }
-            catch (FileNotFoundException fnfe)
-            {
-                /* users = new JObject();
-                  user = new JArray();
-                  JObject guild = new JObject();
-                  guild.Add("ID", g.guild[0].Id.ToString());
-                  JArray ignored = new JArray();
-                  JObject ally = new JObject();
-                  ally.Add("allycode", allycode);
-                  ignored.Add(ally);
-                  guild.Add("Ignored", ignored);
-                  user.Add(guild);
-                  users.Add("Guilds", user);
-                  File.WriteAllText($@"C:\Users\jake\Documents\swgoh\SWGOH Prereqs\SWGOH Prereqs\Data\Ignore.txt", users.ToString());*/
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.StackTrace);
-            }
-        }
-        [Command("ggprofile"), Description("Get the URL to a guilds swgoh.gg profile")]
         public async Task gettest(CommandContext ctx, [Description("Ally Code to lookup")] uint allycode1)
         {
-            login();
+            helper = commandFunctions.login();
             DataHelper dh = new DataHelper(ctx);
             String data = helper.fetchPlayer(new uint[] { 729778685 });
-            File.WriteAllText(detectOS() + @"Data/test.txt", data.ToString());
+            File.WriteAllText(commandFunctions.detectOS() + @"Data/test.txt", data.ToString());
             Console.WriteLine(helper.getStats(data));
             //await ctx.RespondAsync("https://swgoh.gg/g/" + p.Data.GuildId + "/" + p.Data.GuildName.Replace(" ", "-") + "/");
         }
@@ -2268,15 +2379,15 @@ namespace SWGOH
         [Command("testnewApi"), Description("Get the URL to a guilds swgoh.gg profile")]
         public async Task getNewAPI(CommandContext ctx, [Description("Ally Code to lookup")] uint allycode1)
         {
-            login();
+            helper = commandFunctions.login();
             DataHelper dh = new DataHelper(ctx);
             String data = helper.fetchPlayer(new uint[] { 729778685 });
-            File.WriteAllText(detectOS() + @"Data/test.txt", data.ToString());
+            File.WriteAllText(commandFunctions.detectOS() + @"Data/test.txt", data.ToString());
             Console.WriteLine(helper.getStats(data));
             //await ctx.RespondAsync("https://swgoh.gg/g/" + p.Data.GuildId + "/" + p.Data.GuildName.Replace(" ", "-") + "/");
         }
         //shittybot:YXBpLjE2MDExNDczMDkwMTMuYjI1c2VXMWhjblI1Y2c9PS5zd2dvaA===
-        public uint parseAllycode(string allycode)
+        /*public uint parseAllycode(string allycode)
         {
             try
             {
@@ -2336,7 +2447,7 @@ namespace SWGOH
                 return $@"C:\Users\jake\Documents\swgoh\SWGOH Prereqs\SWGOH Prereqs\";
             }
             return "";
-        }
+        }*/
     }
 
     static class LevenshteinDistance

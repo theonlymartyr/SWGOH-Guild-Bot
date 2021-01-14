@@ -8,8 +8,8 @@ namespace SWGOH
 {
     public class GuildMember
     {
-        public int g12 = 0, g13 = 0, relics = 0, totalRelics = 0, relic7 = 0, relic4 = 0, numGP = 0;
-        int[] rLevel = new int[8];
+        public int g12 = 0, g13 = 0, relics = 0, totalRelics = 0, relic7 = 0, relic4 = 0, numGP = 0, relic8 = 0;
+        int[] rLevel = new int[10];
         string r7 = "", toonGP = "", shipGP = "", GP = "";
         PlayerParse.PlayerElement p;
         public GuildMember() { }
@@ -27,7 +27,7 @@ namespace SWGOH
                     if (rost.Relic.CurrentTier > 1)
                     {
                         relics++; rLevel[rost.Relic.CurrentTier - 2]++;
-                       // if ((rost.Relic.CurrentTier - 2) == 7) { r7 += "." + d.toons.GetValueOrDefault(rost.DefId) + "\n"; }
+                        // if ((rost.Relic.CurrentTier - 2) == 7) { r7 += "." + d.toons.GetValueOrDefault(rost.DefId) + "\n"; }
                     }
                 }
             }
@@ -36,8 +36,9 @@ namespace SWGOH
             else { toonGP = p.Stats[1].Value.ToString("#,###,K", CultureInfo.InvariantCulture); }
             if (p.Stats[2].Value >= 1000000) { shipGP = p.Stats[2].Value.ToString("#,###,M", CultureInfo.InvariantCulture); }
             else { shipGP = p.Stats[2].Value.ToString("#,###,k", CultureInfo.InvariantCulture); }
+            relic8 = rLevel[8];
             relic7 = rLevel[7];
-            relic4 = rLevel[7] + rLevel[6] + rLevel[5] + rLevel[4];
+            relic4 = rLevel[8] + rLevel[7] + rLevel[6] + rLevel[5];
         }
         public string buildEmbedField()
         {
@@ -46,9 +47,10 @@ namespace SWGOH
             s += createLine("Toon GP:", toonGP);
             s += createLine("Ship GP:", shipGP);
             s += createLine("Tot Relics:", (relics).ToString());
+            s += createLine("R8:", relic8.ToString());
             s += createLine("R7:", relic7.ToString());
             if (r7.Length > 0) { s += createLine("", r7.TrimEnd('\n')); }
-            s += createLine("R4+:", relic4.ToString());
+            s += createLine("R5+:", relic4.ToString());
             s += createLine("G13:", g13.ToString());
             s += createLine("G12:", g12.ToString());
             s += "```";

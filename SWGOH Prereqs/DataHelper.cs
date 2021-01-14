@@ -1179,14 +1179,17 @@ namespace SWGOH_Prereqs
         {
             foreach (GuildParse.Roster r in guild.Roster)
             {
-                if (guildOut.ignoreList.Contains(r.AllyCode.ToString()))
+                if (guildOut.ignoreList != null)
                 {
-                    guildOut.gpIgnored += (int)r.Gp;
-                    Console.WriteLine($"ignoring { guildOut.gpIgnored} Total GP");
-                    guildOut.gpIgnoredToon += (double)r.GpChar;
-                    Console.WriteLine($"ignoring { guildOut.gpIgnoredToon} Toon GP");
-                    guildOut.gpIgnoredFleet += (double)r.GpShip;
-                    Console.WriteLine($"ignoring { guildOut.gpIgnoredFleet} Fleet GP");
+                    if (guildOut.ignoreList.Contains(r.AllyCode.ToString()))
+                    {
+                        guildOut.gpIgnored += (int)r.Gp;
+                        Console.WriteLine($"ignoring { guildOut.gpIgnored} Total GP");
+                        guildOut.gpIgnoredToon += (double)r.GpChar;
+                        Console.WriteLine($"ignoring { guildOut.gpIgnoredToon} Toon GP");
+                        guildOut.gpIgnoredFleet += (double)r.GpShip;
+                        Console.WriteLine($"ignoring { guildOut.gpIgnoredFleet} Fleet GP");
+                    }
                 }
             }
         }

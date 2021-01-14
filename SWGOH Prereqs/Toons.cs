@@ -18,7 +18,7 @@ namespace SWGOH_Prereqs
         public int zzzzzz { get; set; }
         public int[] gear = new int[3];
         public int[] stars = new int[3];
-        public int[] relics = new int[8];
+        public int[] relics = new int[10];
         public string name { get; set; }
         public string id { get; set; }
         public int maxZetas { get; set; }

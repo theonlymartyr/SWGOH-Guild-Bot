@@ -75,7 +75,7 @@ namespace SWGOH
                 TokenType = TokenType.Bot,
 
                 AutoReconnect = true,
-                LogLevel = LogLevel.Debug,
+                LogLevel = LogLevel.Info,
                 UseInternalLogHandler = true
             };
 
@@ -126,7 +126,7 @@ namespace SWGOH
 
             // up next, let's register our commands
             this.Commands.RegisterCommands<Commands>();
-
+            this.Commands.RegisterCommands<TestCommands>();
 
 
             //await this.Client.UpdateStatusAsync(dg);
