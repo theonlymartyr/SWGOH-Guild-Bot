@@ -35,7 +35,7 @@ namespace SWGOH_Prereqs
             numZetas = new int[maxZetas];
         }
     }
-    class ToonCompare
+    public class ToonCompare
     {
         public int level { get; set; }
         public int rarity { get; set; }

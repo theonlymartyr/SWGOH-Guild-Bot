@@ -4,7 +4,7 @@ using System.Text;
 
 namespace SWGOH_Prereqs
 {
-    class GAPlayer
+    public class GAPlayer
     {
         public List<GAToon> toonsOwned = new List<GAToon>();
         public ToonCompare toonCompare;

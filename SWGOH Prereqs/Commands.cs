@@ -26,6 +26,7 @@ using System.Threading;
 using System.Runtime.ConstrainedExecution;
 using System.Timers;
 using System.Diagnostics;
+using System.Drawing;
 
 namespace SWGOH
 {
@@ -651,6 +652,7 @@ namespace SWGOH
                         }
                         catch { tries++; }
                     }
+                    string totalEmbeds = "";
                     if (guilds != null)
                     {
                         if (guilds.guild.Length > 1)
@@ -701,24 +703,24 @@ namespace SWGOH
                                 if (guild1.Members == players1.PlayerList.Length && guild2.Members == players2.PlayerList.Length)
                                 {
                                     string link1 = "", link2 = "";
-                                    for (int i = 0; i < players1.PlayerList.Length; i++)
+                                    for (int j = 0; j < players1.PlayerList.Length; j++)
                                     {
                                         try
                                         {
                                             swgohGGhelper help = new swgohGGhelper();
-                                            string info = help.getGGinfo((uint)players1.PlayerList[i].AllyCode);
+                                            string info = help.getGGinfo((uint)players1.PlayerList[j].AllyCode);
                                             SwgohPlayer p1 = SwgohPlayer.FromJson(info);
                                             link1 = $"https://swgoh.gg/g/{p1.Data.GuildId + "/" + p1.Data.GuildName.Replace(" ", "-") + "/"}";
                                             break;
                                         }
                                         catch { }
                                     }
-                                    for (int i = 0; i < players2.PlayerList.Length; i++)
+                                    for (int k = 0; k < players2.PlayerList.Length; k++)
                                     {
                                         try
                                         {
                                             swgohGGhelper help = new swgohGGhelper();
-                                            string info = help.getGGinfo((uint)players2.PlayerList[i].AllyCode);
+                                            string info = help.getGGinfo((uint)players2.PlayerList[k].AllyCode);
                                             SwgohPlayer p2 = SwgohPlayer.FromJson(info);
                                             link2 = $"https://swgoh.gg/g/{p2.Data.GuildId + "/" + p2.Data.GuildName.Replace(" ", "-") + "/"}";
                                             break;
@@ -756,7 +758,7 @@ namespace SWGOH
                                     s += dh.createLongLine("Fleet GP:", ((dh.buildCharGP(guild1.Roster, "Fleet") - guild1st.gpIgnoredFleet) / 1000000).ToString("0.##") + "M", ((dh.buildCharGP(guild2.Roster, "Fleet") - guild2nd.gpIgnoredFleet) / 1000000).ToString("0.##") + "M");
                                     s += "```";
                                     embed.Description = s;
-
+                                    // totalEmbeds += s;
                                     #endregion
                                     #region gear
                                     title = "==Gear==\n";
@@ -771,6 +773,7 @@ namespace SWGOH
                                     embeds += dh.createLongLine("G11:", guild1st.G11.ToString(), guild2nd.G11.ToString());
                                     embeds += "```";
                                     embed.AddField($"{title}", embeds, false);
+                                    totalEmbeds += embeds;
                                     #endregion
                                     #region relics
                                     title = "==Relics==";
@@ -787,6 +790,7 @@ namespace SWGOH
                                     embeds += dh.createLongLine("Relic 0:", guild1st.relics[0].ToString(), guild2nd.relics[0].ToString());
                                     embeds += "```";
                                     embed.AddField($"{title}", embeds, false);
+                                    totalEmbeds += embeds;
                                     #endregion
                                     #region mods
                                     title = "==Mods==";
@@ -799,6 +803,7 @@ namespace SWGOH
                                     embeds += dh.createLongLine("100+ Off:", guild1st.off100.ToString(), guild2nd.off100.ToString());
                                     embeds += "```";
                                     embed.AddField($"{title}", embeds, false);
+                                    totalEmbeds += embeds;
                                     #endregion
                                     CharacterDefID d = new CharacterDefID();
                                     int totalGL1 = 0, totalGL2 = 0;
@@ -826,6 +831,7 @@ namespace SWGOH
                                         embeds += dh.createLongLine($"Total {d.toons[toonName]}:", p1.Total.ToString(), p2.Total.ToString());
                                     }
                                     embeds += "```";
+                                    totalEmbeds += embeds;
                                     embed.AddField($"{title}", embeds, false);
                                     foreach (string toonName in TWToonList)
                                     {
@@ -881,6 +887,7 @@ namespace SWGOH
                                         }
                                         embeds += "```";
                                         embed.AddField($"{title}", embeds, true);
+                                        totalEmbeds += embeds;
                                     }
                                     #region ignoring
                                     try
@@ -947,7 +954,13 @@ namespace SWGOH
 
                                     stop.Stop();
                                     Console.WriteLine(stop.Elapsed.ToString("G"));
+                                    Console.WriteLine(totalEmbeds);
 
+                                    ImageFromText i = new ImageFromText();
+                                    string image = $"{guild1.Name}.png";
+                                    totalEmbeds = totalEmbeds.Replace("```", "").Replace(".", " ");
+                                    // i.DrawText(totalEmbeds, new Font("Arial", 96, FontStyle.Bold), System.Drawing.Color.Black, 3200, image);
+                                    //  await ctx.RespondWithFileAsync(image);
                                     // DateTime end = DateTime.Now;
                                     //Console.WriteLine((end - start).TotalSeconds);
 
@@ -1314,81 +1327,88 @@ namespace SWGOH
             if (values != null && values.Count > 0)
             {
                 List<DiscordEmbedBuilder> indOrders = new List<DiscordEmbedBuilder>();
-                int i = 0;
-                foreach (var row in values)
+                try
                 {
-                    if (!ignoredList.Contains(row[0]))
+                    foreach (var row in values)
                     {
-                        embeds = "```diff\n";
-                        title = $"{row[0]} Assignments";
-
-                        int j = 0;
-                        embeds += $"{row[2]} Def Banners\n";
-                        embeds += "+ Defensive Squads\n";
-
-                        foreach (var assignment in row)
+                        if (!ignoredList.Contains(row[0]))
                         {
-                            if (j != 0 && j != 1 && j != 2)
+                            embeds = "```diff\n";
+                            title = $"{row[0]} Assignments";
+
+                            int j = 0;
+                            embeds += $"{row[2]} Def Banners\n";
+                            embeds += "+ Defensive Squads\n";
+
+                            foreach (var assignment in row)
                             {
-                                if (Regex.IsMatch(assignment.ToString(), @"\d{2,6}") || !Regex.IsMatch(assignment.ToString(), @"\d{1,1}") || Regex.IsMatch(assignment.ToString(), @"\b(\w*fleet defense\w*)\b"))
+                                if (j != 0 && j != 1 && j != 2)
                                 {
-                                    embeds += "- ";
+                                    if (Regex.IsMatch(assignment.ToString(), @"\d{2,6}") || !Regex.IsMatch(assignment.ToString(), @"\d{1,1}") || Regex.IsMatch(assignment.ToString(), @"\b(\w*fleet defense\w*)\b"))
+                                    {
+                                        embeds += "- ";
+                                    }
+                                    if (j != row.Count - 1)
+                                        embeds += assignment + "\n";
+                                    else
+                                        embeds += assignment;
                                 }
-                                if (j != row.Count - 1)
-                                    embeds += assignment + "\n";
-                                else
-                                    embeds += assignment;
+                                j++;
+                            }
+                            embeds += "```";
+                            try
+                            {
+                                foreach (var member in ctx.Guild.Members)
+                                {
+                                    if (member.Id.ToString().Equals(row[1].ToString().Replace("<@", "").Replace("!", "").Replace(">", "")))
+                                    {
+                                        var individualEmbed = new DiscordEmbedBuilder
+                                        {
+                                            Title = "TW Assignment",
+                                            Color = new DiscordColor(0xFF0000) // red
+                                        };
+                                        individualEmbed.AddField($"{title}", row[1] + "\n" + embeds);
+                                        indOrders.Add(individualEmbed);
+                                    }
+                                }
+                                embed.AddField($"{title}", row[1] + "\n" + embeds, true);
+                            }
+                            catch
+                            {
+                                await ctx.RespondAsync(dr.Mention + " Here are the TW Assignments:", embed: embed);
+                                embed = new DiscordEmbedBuilder
+                                {
+                                    Title = "",
+                                    Color = new DiscordColor(0xFF0000) // red
+                                };
+                                embed.AddField($"{title}", row[1] + "\n" + embeds, true);
                             }
                             j++;
                         }
-                        embeds += "```";
-                        try
+                    }
+
+                    String ignoredPlayers = "";
+                    try
+                    {
+                        //foreach (string name in ignoredList) { ignoredPlayers += name + ","; }
+                       // ignoredPlayers = ignoredPlayers.Substring(0, ignoredPlayers.Length - 1);
+                        //embed.AddField($"Ignoring:", $"```{ignoredPlayers}```", false);
+                        await ctx.RespondAsync(embed: embed);
+                    }
+                    catch
+                    {
+                        await ctx.RespondAsync(embed: embed);
+                        embed = new DiscordEmbedBuilder
                         {
-                            foreach (var member in ctx.Guild.Members)
-                            {
-                                if (member.Id.ToString().Equals(row[1].ToString().Replace("<@", "").Replace("!", "").Replace(">", "")))
-                                {
-                                    var individualEmbed = new DiscordEmbedBuilder
-                                    {
-                                        Title = "TW Assignment",
-                                        Color = new DiscordColor(0xFF0000) // red
-                                    };
-                                    individualEmbed.AddField($"{title}", row[1] + "\n" + embeds);
-                                    indOrders.Add(individualEmbed);
-                                }
-                            }
-                            embed.AddField($"{title}", row[1] + "\n" + embeds, true);
-                        }
-                        catch
-                        {
-                            await ctx.RespondAsync(dr.Mention + " Here are the TW Assignments:", embed: embed);
-                            embed = new DiscordEmbedBuilder
-                            {
-                                Title = "",
-                                Color = new DiscordColor(0xFF0000) // red
-                            };
-                            embed.AddField($"{title}", row[1] + "\n" + embeds, true);
-                        }
-                        i++;
+                            Title = "",
+                            Color = new DiscordColor(0xFF0000) // red
+                        };
+                       embed.AddField($"Ignoring:", $"```{ignoredPlayers}```", false);
                     }
                 }
-                String ignoredPlayers = "";
-                try
+                catch (ArgumentOutOfRangeException ex)
                 {
-                    foreach (string name in ignoredList) { ignoredPlayers += name + ","; }
-                    ignoredPlayers = ignoredPlayers.Substring(0, ignoredPlayers.Length - 1);
-                    embed.AddField($"Ignoring:", $"```{ignoredPlayers}```", false);
-                    await ctx.RespondAsync(embed: embed);
-                }
-                catch
-                {
-                    await ctx.RespondAsync(embed: embed);
-                    embed = new DiscordEmbedBuilder
-                    {
-                        Title = "",
-                        Color = new DiscordColor(0xFF0000) // red
-                    };
-                    embed.AddField($"Ignoring:", $"```{ignoredPlayers}```", false);
+                    Console.WriteLine(ex.StackTrace);
                 }
                 await m.DeleteAsync();
                 int DMs = 0;
@@ -1791,7 +1811,7 @@ namespace SWGOH
                 DiscordMessage m = await ctx.RespondAsync("processing request, standby...");
                 bool found = false;
                 //if file exists, parse it
-                users = JObject.Parse(File.ReadAllText(commandFunctions.detectOS() + @"Data\users.txt"));
+                users = JObject.Parse(File.ReadAllText(commandFunctions.detectOS() + @"Data/users.txt"));
                 user = (JArray)users["users"];
                 foreach (JObject obj in user.Children())
                 {
@@ -1804,7 +1824,7 @@ namespace SWGOH
                 }
                 if (found)
                 {
-                    File.WriteAllText(commandFunctions.detectOS() + @"Data\users.txt", users.ToString());
+                    File.WriteAllText(commandFunctions.detectOS() + @"Data/users.txt", users.ToString());
                     await ctx.RespondAsync($"<@{userID}> has unregistered. Register with a new allycode using ```;;r allycode```");
                 }
                 else
@@ -1834,7 +1854,7 @@ namespace SWGOH
                 GuildParse.Guild g = dh.getGuild(new uint[] { allycode }, helper);
                 dh.logCommandInfo($"{ctx.Member} registering {allycode}");
                 //if file exists, parse it
-                users = JObject.Parse(File.ReadAllText(commandFunctions.detectOS() + @"Data\users.txt"));
+                users = JObject.Parse(File.ReadAllText(commandFunctions.detectOS() + @"Data/users.txt"));
                 dh.logCommandInfo($"Checking for existing registration");
                 user = (JArray)users["users"];
                 foreach (JObject obj in user.Children())
@@ -1854,9 +1874,9 @@ namespace SWGOH
                 {
                     if (addUser(user, allycode, ctx.Member.Id.ToString(), g.guild[0].Id))
                     {
-                        File.WriteAllText(commandFunctions.detectOS() + @"Data\users.txt", users.ToString());
+                        File.WriteAllText(commandFunctions.detectOS() + @"Data/users.txt", users.ToString());
                         await ctx.RespondAsync("<@" + ctx.Member.Id.ToString() + "> has  been registered to " + allycode + ". If you want to change your allycode, please unregister and register again with the new allycode.");
-                        dh.logCommandInfo($"{ctx.Member} registered to{allycode}");
+                        dh.logCommandInfo($"{ctx.Member} registered to c{allycode}");
                     }
                     else
                         await ctx.RespondAsync("<@" + ctx.Member.Id.ToString() + "> not registered to " + allycode + ". Check the allycode and try again.");
@@ -1872,7 +1892,7 @@ namespace SWGOH
                 GuildParse.Guild g = dh.getGuild(new uint[] { allycode }, helper);
                 if (addUser(user, allycode, ctx.Member.Id.ToString(), g.guild[0].Id))
                 {
-                    File.WriteAllText(commandFunctions.detectOS() + @"Data\users.txt", users.ToString());
+                    File.WriteAllText(commandFunctions.detectOS() + @"Data/users.txt", users.ToString());
                     await ctx.RespondAsync("<@" + ctx.Member.Id.ToString() + "> has  been registered to " + allycode + ". If you want to change your allycode, please unregister and register again with the new allycode.");
                 }
                 else
@@ -2335,32 +2355,23 @@ namespace SWGOH
             JObject toons;
             Database db = new Database();
             DataHelper dh = new DataHelper(ctx);
-            //CharacterDefID d = new CharacterDefID();
+            CharacterDefID d = new CharacterDefID();
             String toonName = "";
             try
             {
-                SqlDataReader r = db.GetRecords("Select * FROM CommonNames Order BY ToonDefID");
-                if (r.HasRows)
+                int j = 0;
+                string embeds = "";
+                foreach (KeyValuePair<string, string> entry in d.toons)
                 {
-                    String previousID = "";
-                    String toonNames = "";
-                    string embeds = "";
-
-                    int i = 0;
-                    while (r.Read())
+                    embeds += entry.Value.ToString() + "\n";
+                    if (j % 10 == 0 && j != 0)
                     {
-                        embeds += r["ToonName"].ToString() + "\n";
-
-                        if (i % 30 == 0 && i != 0)
-                        {
-                            embed.AddField($"==", embeds, true);
-                            embeds = "";
-                        }
-                        i++;
+                        embed.AddField($"==", embeds, true);
+                        embeds = "";
                     }
-                    // await ctx.RespondAsync("", embed: embed);
+                    j++;
                 }
-
+                // await ctx.RespondAsync("", embed: embed);
             }
             catch (Exception e) { Console.WriteLine(e.Message); }
 
@@ -2448,7 +2459,47 @@ namespace SWGOH
             }
             return "";
         }*/
+        [Command("pe"), Description("Evaluate a player"), Aliases("")]
+        public async Task evaluatePlayer(CommandContext ctx, [Description("Player to evaluate")] string allycode)
+        {
+            DiscordMessage m = await ctx.RespondAsync("processing request, standby...");
+            uint parsedAllyCode1 = commandFunctions.checkAllycode(ctx, allycode);
+            if (!(parsedAllyCode1 == 1))
+            {
+                helper = commandFunctions.login();
+                DataHelper dh = new DataHelper(ctx);
+                GAPlayer[] players = dh.getGAStats(m, new uint[] { parsedAllyCode1 }, helper, GAToonList);
+                double score = calcModScore(players, ctx, m);
+                calcGearScore(players, ctx, m);
+                await m.ModifyAsync($"Mod score is: { score}");
+            }
+        }
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+        public double calcModScore(GAPlayer[] players, CommandContext ctx, DiscordMessage m)
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+        {
+            Console.WriteLine(players[0].speedMods[1] + " : " + (players[0].toonGP * 1.0) / 100000);
+            return Math.Round(((players[0].speedMods[1]) * 1.0) / ((players[0].toonGP * 1.0) / 100000), 2);
+        }
+        public double calcGearScore(GAPlayer[] players, CommandContext ctx, DiscordMessage m)
+        {
+            Console.WriteLine(Convert.ToDouble(players[0].G12 + players[0].G121 + players[0].G122 + players[0].G123 + players[0].G124 + players[0].G125) / (Convert.ToDouble(players[0].toonGP) / 100000));
+            return 1.0;
+        }
+        /*public double calcG13Bonus(GAPlayer players)
+        {
+            return 1 + 2;
+        }*/
     }
+    /*
+     
+    Mod Quality: Number of +15 Speeds / (squad GP / 100000)
+    Gear Quality: (Number of G12+ + G13 Bonus Score) / (Total GP / 100000)
+    G13 Bonus score: 1 + (0.2 bonus per relic tier) (ex: r0 = 1, r1 = 1.2, ..., r7 = 2.4)
+    Total Quality: Mod Quality + Gear Quality
+
+     * */
+
 
     static class LevenshteinDistance
     {

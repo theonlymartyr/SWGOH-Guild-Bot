@@ -27,7 +27,6 @@ namespace SWGOH
                     if (rost.Relic.CurrentTier > 1)
                     {
                         relics++; rLevel[rost.Relic.CurrentTier - 2]++;
-                        // if ((rost.Relic.CurrentTier - 2) == 7) { r7 += "." + d.toons.GetValueOrDefault(rost.DefId) + "\n"; }
                     }
                 }
             }

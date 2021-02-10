@@ -4,7 +4,7 @@ using System.Text;
 
 namespace SWGOH_Prereqs
 {
-    class GAToon
+    public class GAToon
     {
         public int GP { get; set; }
         public int starLevel { get; set; }

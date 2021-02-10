@@ -317,8 +317,11 @@ namespace SWGOH_Prereqs
             {
                 me.ModifyAsync(me.Content + $"\n \nBuilding stats for {player.PlayerList[0].Name}");
                 getRoster(player.PlayerList[0], player1, list);
-                me.ModifyAsync(me.Content + $"\n\nBuilding stats for {player.PlayerList[0].Name}");
-                getRoster(player.PlayerList[1], player2, list);
+                if (allycodes.Length > 1)
+                {
+                    me.ModifyAsync(me.Content + $"\n\nBuilding stats for {player.PlayerList[0].Name}");
+                    getRoster(player.PlayerList[1], player2, list);
+                }
             }
             catch (Exception e) { Console.WriteLine(e.StackTrace); }
             logCommandInfo($"Building GA Stats");
@@ -999,8 +1002,11 @@ namespace SWGOH_Prereqs
                 Console.WriteLine(player.PlayerList.Length);
                 me.ModifyAsync(me.Content + $"\n \nBuilding stats for {player.PlayerList[0].Name}");
                 getToon(player.PlayerList[0], player1, list);
-                me.ModifyAsync(me.Content + $"\n\nBuilding stats for {player.PlayerList[1].Name}");
-                getToon(player.PlayerList[1], player2, list);
+                if (allycodes.Length > 1)
+                {
+                    me.ModifyAsync(me.Content + $"\n\nBuilding stats for {player.PlayerList[1].Name}");
+                    getToon(player.PlayerList[1], player2, list);
+                }
             }
             catch (Exception e) { Console.WriteLine(e.StackTrace); }
             logCommandInfo($"Building Toon Stats");
