@@ -9,7 +9,7 @@ namespace SWGOH
     public class GuildMember
     {
         public int g12 = 0, g13 = 0, relics = 0, totalRelics = 0, relic7 = 0, relic4 = 0, numGP = 0;
-        int[] rLevel = new int[8];
+        int[] rLevel = new int[15];
         string r7 = "", toonGP = "", shipGP = "", GP = "";
         PlayerParse.PlayerElement p;
         public GuildMember() { }
@@ -27,7 +27,7 @@ namespace SWGOH
                     if (rost.Relic.CurrentTier > 1)
                     {
                         relics++; rLevel[rost.Relic.CurrentTier - 2]++;
-                       // if ((rost.Relic.CurrentTier - 2) == 7) { r7 += "." + d.toons.GetValueOrDefault(rost.DefId) + "\n"; }
+                        // if ((rost.Relic.CurrentTier - 2) == 7) { r7 += "." + d.toons.GetValueOrDefault(rost.DefId) + "\n"; }
                     }
                 }
             }

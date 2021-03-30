@@ -75,7 +75,7 @@ namespace SWGOH
                 TokenType = TokenType.Bot,
 
                 AutoReconnect = true,
-                LogLevel = LogLevel.Debug,
+                LogLevel = LogLevel.Error,
                 UseInternalLogHandler = true
             };
 

@@ -12,7 +12,7 @@ namespace SWGOH_Prereqs
         public int Zetas { get; set; }
         public int totalRelics { get; set; }
         public int off100 { get; set; }
-        public int[] relics = new int[8];
+        public int[] relics = new int[15];
         public int G11 { get; set; }
         public int G13 { get; set; }
         public int G12 { get; set; }

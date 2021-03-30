@@ -41,21 +41,56 @@ namespace SWGOH
             this.token = null;
 
             string protocol = string.IsNullOrEmpty(settings.protocol) ? "https" : settings.protocol;
-            string host = string.IsNullOrEmpty(settings.host) ? "api.swgoh.help" : settings.host;
-            string port = string.IsNullOrEmpty(settings.port) ? "" : settings.port;
+            string host = string.IsNullOrEmpty(settings.host) ? "api.thesenate.gg" : settings.host;
+            string port = string.IsNullOrEmpty(settings.port) ? "2186" : settings.port;
 
-            url = protocol + "://" + host + port;
+            /* url = protocol + "://" + host + port;
+             signin = url + "/auth/signin/";
+             data = url + "/swgoh/data/";
+             player = url + "/swgoh/player/";
+             guild = url + "/swgoh/guild/";
+             units = url + "/swgoh/roster/";
+             zetas = url + "/swgoh/zetas/";
+             squads = url + "/swgoh/squads/";
+             events = url + "/swgoh/events/";
+             battles = url + "/swgoh/battles/";*/
+            url = "http://api.thesenate.gg";
             signin = url + "/auth/signin/";
             data = url + "/swgoh/data/";
-            player = url + "/swgoh/player/";
-            guild = url + "/swgoh/guild/";
+            player = url + "/pipe/player/";
+            guild = url + "/pipe/guild/";
             units = url + "/swgoh/roster/";
             zetas = url + "/swgoh/zetas/";
             squads = url + "/swgoh/squads/";
             events = url + "/swgoh/events/";
             battles = url + "/swgoh/battles/";
         }
+        public swgohHelpApiHelper()
+        {
 
+            /* user = "username=" + settings.username;
+             user += "&password=" + settings.password;
+             user += "&grant_type=password";
+             user += "&client_id=" + settings.client_id;
+             user += "&client_secret=" + settings.client_secret;
+
+             this.token = null;
+
+             string protocol = string.IsNullOrEmpty(settings.protocol) ? "https" : settings.protocol;
+             string host = string.IsNullOrEmpty(settings.host) ? "api.thesenate.gg" : settings.host;
+             string port = string.IsNullOrEmpty(settings.port) ? "2186" : settings.port;
+             */
+            url = "http://api.thesenate.gg";
+            signin = url + "/auth/signin/";
+            data = url + "/swgoh/data/";
+            player = url + "/pipe/player/";
+            guild = url + "/pipe/guild/";
+            units = url + "/swgoh/roster/";
+            zetas = url + "/swgoh/zetas/";
+            squads = url + "/swgoh/squads/";
+            events = url + "/swgoh/events/";
+            battles = url + "/swgoh/battles/";
+        }
         public bool login()
         {
             try
@@ -140,7 +175,7 @@ namespace SWGOH
                 HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
                 request.Method = "POST";
                 request.ContentType = "application/json";
-                request.Headers.Add("Authorization", "Bearer " + token + "");
+                // request.Headers.Add("Authorization", "Bearer " + token + "");
                 request.Timeout = 300000;
                 string json = JsonConvert.SerializeObject(param);
 
@@ -157,7 +192,7 @@ namespace SWGOH
                 reader.Close();
                 dataStream.Close();
                 response.Close();
-
+                Console.WriteLine("API response:" + apiResponse);
                 return apiResponse;
             }
             catch (WebException e)
@@ -317,6 +352,7 @@ namespace SWGOH
 
         public string fetchGuild(uint[] allycodes, string language = null, bool? enums = null, bool? roster = null, bool? units = null, bool? mods = null, object project = null)
         {
+            Console.WriteLine("Here");
             dynamic obj = new ExpandoObject();
             obj.allycodes = allycodes;
             if (language != null)
@@ -375,6 +411,50 @@ namespace SWGOH
                 throw e;
             }
         }
+        #region premium api
+        public string fetchGetApi(string type, string allycode)
+        {
+            try
+            {
+                string sendURL = "";
+                if (type.Equals("PLAYER"))
+                {
+                    sendURL += player + allycode;
+                }
+                else
+                {
+                    sendURL += guild + allycode;
+                }
+                Console.WriteLine(sendURL);
+                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(sendURL);
+                request.Method = "GET";
 
+                WebResponse response = request.GetResponse();
+                var dataStream = response.GetResponseStream();
+                StreamReader reader = new StreamReader(dataStream);
+                var apiResponse = reader.ReadToEnd();
+                reader.Close();
+                dataStream.Close();
+                response.Close();
+                // Console.WriteLine("API response:" + apiResponse);
+                return apiResponse;
+            }
+            catch (WebException e)
+            {
+                using (WebResponse response = e.Response)
+                {
+                    HttpWebResponse httpResponse = (HttpWebResponse)response;
+                    Console.WriteLine("Error code: {0}", httpResponse.StatusCode);
+                    using (Stream data = response.GetResponseStream())
+                    using (var reader = new StreamReader(data))
+                    {
+                        // text is the response body
+                        string text = reader.ReadToEnd();
+                        return text;
+                    }
+                }
+            }
+        }
+        #endregion
     }
 }

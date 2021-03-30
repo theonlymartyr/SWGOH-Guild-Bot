@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 
 namespace SWGOH_Prereqs
 {
@@ -40,13 +41,12 @@ namespace SWGOH_Prereqs
             logCommandInfo($"Building Members For Guild Stats");
             foreach (PlayerParse.PlayerElement pe in r.PlayerList)
             {
-                GuildMember g = new GuildMember(pe);
-                g.calcstats();
-                gm.Add(g);
-                Hashtable hash = new Hashtable();
-                hash.Add("GuildID", ID);
-                hash.Add("Allycode", pe.AllyCode);
-                // db.InsertRow(hash, "GuildMembers");
+                if (pe != null)
+                {
+                    GuildMember g = new GuildMember(pe);
+                    g.calcstats();
+                    gm.Add(g);
+                }
             }
             try
             {
@@ -91,8 +91,8 @@ namespace SWGOH_Prereqs
             catch { SortMembers(gm, 1, "GP"); sortedBy = "GP DESCENDING:"; }
             foreach (GuildMember gmb in gm)
             {
-                if (i < 25) { b.AddField($"{gmb.getMemberName()}=", gmb.buildEmbedField().Replace(",", "."), true); }
-                else { b2.AddField($"={gmb.getMemberName()}=", gmb.buildEmbedField().Replace(",", "."), true); }
+                if (i < 25) { b.AddField($"{gmb.getMemberName()}", gmb.buildEmbedField().Replace(",", "."), true); }
+                else { b2.AddField($"{gmb.getMemberName()}", gmb.buildEmbedField().Replace(",", "."), true); }
                 i++;
             }
             return sortedBy;
@@ -186,6 +186,7 @@ namespace SWGOH_Prereqs
                         if (r.Gear >= 11) { tempToon.gear[r.Gear - 11]++; }
                         tempToon.Total++;
                         if (r.Relic.CurrentTier > 1) { tempToon.relics[r.Relic.CurrentTier - 2]++; tempToon.totRel++; }
+                        if (r.Relic.CurrentTier == 10) { tempToon.totalR8++; }
                         if (r.Gp >= 16000)
                         {
                             if (r.Gp >= 20000) tempToon.gp20++;
@@ -245,11 +246,19 @@ namespace SWGOH_Prereqs
                 if (r.Relic != null) { if (r.Relic.CurrentTier - 2 >= 0) { guildObj.TotalRelics++; guildObj.relics[r.Relic.CurrentTier - 2]++; } }
             }
         }
+        public double buildCharGP(PlayerParse.PlayerElement[] r, string toonType)
+        {
+            logCommandInfo($"Building GP Values for TW");
+            double GP = 0;
+            if (toonType.Equals("Char")) { foreach (PlayerParse.PlayerElement rost in r) { GP += rost.Stats[1].Value; } }
+            if (toonType.Equals("Fleet")) { foreach (PlayerParse.PlayerElement rost in r) { GP += rost.Stats[2].Value; } }
+            return GP;
+        }
         public double buildCharGP(GuildParse.Roster[] r, string toonType)
         {
             logCommandInfo($"Building GP Values for TW");
             double GP = 0;
-            if (toonType.Equals("Char")) { foreach (GuildParse.Roster rost in r) { GP += rost.GpChar; } }
+            if (toonType.Equals("Char")) { foreach (GuildParse.Roster rost in r) { GP += rost.GpChar; Console.WriteLine(rost.GpChar); } }
             if (toonType.Equals("Fleet")) { foreach (GuildParse.Roster rost in r) { GP += rost.GpShip; } }
             return GP;
         }
@@ -301,6 +310,98 @@ namespace SWGOH_Prereqs
             return s;
         }
         #endregion
+        public GAPlayer[] getGAStats(DiscordMessage me, string players, swgohHelpApiHelper helper, string[] list)
+
+        {
+            CharacterDefID d = new CharacterDefID();
+            GAPlayer[] toons = new GAPlayer[2];
+            GAPlayer player1 = new GAPlayer();
+            GAPlayer player2 = new GAPlayer();
+            toons[0] = player1;
+            toons[1] = player2;
+            PlayerParse.Player player = JsonConvert.DeserializeObject<PlayerParse.Player>("{\"players\":" + helper.getStats("[" + players + "]") + "}");
+            //File.WriteAllText(@"C:\Users\jake\Documents\swgoh\SWGOH Prereqs\SWGOH Prereqs\players.json", statRoster);
+            try
+            {
+                me.ModifyAsync(me.Content + $"\n \nBuilding stats for {player.PlayerList[0].Name}");
+                getRoster(player.PlayerList[0], player1, list);
+                me.ModifyAsync(me.Content + $"\n\nBuilding stats for {player.PlayerList[0].Name}");
+                getRoster(player.PlayerList[1], player2, list);
+            }
+            catch (Exception e) { Console.WriteLine(e.StackTrace); }
+            logCommandInfo($"Building GA Stats");
+            for (int i = 0; i < player.PlayerList.Length; i++)
+            {
+                toons[i].AllyCode = player.PlayerList[i].AllyCode;
+                toons[i].name = player.PlayerList[i].Name;
+                toons[i].totGP = (int)player.PlayerList[i].Stats[0].Value;
+                toons[i].shipGP = (int)player.PlayerList[i].Stats[2].Value;
+                toons[i].toonGP = (int)player.PlayerList[i].Stats[1].Value;
+                toons[i].offWon = (int)player.PlayerList[i].Stats[13].Value;
+                toons[i].defend = (int)player.PlayerList[i].Stats[14].Value;
+                toons[i].under = (int)player.PlayerList[i].Stats[17].Value;
+                toons[i].fullClear = (int)player.PlayerList[i].Stats[16].Value;
+                toons[i].Banners = (int)player.PlayerList[i].Stats[15].Value;
+                int[] speeds = new int[4];
+
+                foreach (PlayerParse.Roster r in player.PlayerList[i].Roster)
+                {
+                    if (r.CombatType == 2)
+                    {
+                        //is ship
+                    }
+                    else
+                    {
+                        foreach (PlayerParse.Skill skill in r.Skills) { if (skill.IsZeta) { if (skill.Tier == 8) { toons[i].Zetas++; } } }
+                        if (r.Relic != null) { if (r.Relic.CurrentTier - 2 >= 0) { toons[i].totalRelics++; toons[i].relics[r.Relic.CurrentTier - 2]++; } }
+                        foreach (PlayerParse.Mod m in r.Mods)
+                        {
+                            foreach (PlayerParse.SecondaryStat s in m.SecondaryStat)
+                            {
+                                if (s.UnitStat == 5) { checkModSpeed(s.Value, speeds); }
+                                if (s.UnitStat == 41) { if (s.Value >= 100) { toons[i].off100++; } }
+                            }
+                            if (m.Pips == 6) { toons[i].sixStarMods++; }
+                        }
+                        switch (r.Gear)
+                        {
+                            case 11:
+                                toons[i].G11++;
+                                break;
+                            case 12:
+                                switch (r.Equipped.Length)
+                                {
+                                    case 0:
+                                        toons[i].G12++;
+                                        break;
+                                    case 1:
+                                        toons[i].G121++;
+                                        break;
+                                    case 2:
+                                        toons[i].G122++;
+                                        break;
+                                    case 3:
+                                        toons[i].G123++;
+                                        break;
+                                    case 4:
+                                        toons[i].G124++;
+                                        break;
+                                    case 5:
+                                        toons[i].G125++;
+                                        break;
+                                }
+                                break;
+                            case 13:
+                                toons[i].G13++;
+                                break;
+                        }
+                    }
+
+                }
+                toons[i].speedMods = speeds;
+            }
+            return toons;
+        }
         public GAPlayer[] getGAStats(DiscordMessage me, uint[] allycodes, swgohHelpApiHelper helper, string[] list)
         {
             CharacterDefID d = new CharacterDefID();
@@ -471,12 +572,15 @@ namespace SWGOH_Prereqs
         }
         public GuildParse.Guild getGuild(uint[] ac, swgohHelpApiHelper helper)
         {
+
             dynamic obj = new ExpandoObject();
             obj.name = 1;
             obj.roster = 1;
             obj.stats = 1;
             string guild = "";
+            Console.WriteLine("TRying to get guilds");
             guild = helper.fetchGuild(ac);
+
             guild = "{\"guild\":" + guild + "}";
 
             File.WriteAllText("test.json", guild);
@@ -492,9 +596,24 @@ namespace SWGOH_Prereqs
             obj.stats = 1;
             string guild = "";
             guild = helper.fetchGuild(ac);
+            //guild = helper.fetchGetApi("GUILD", ac)
             // guild = "{\"guild\":" + guild + "}";
 
             File.WriteAllText("test.json", guild);
+            return guild;
+
+        }
+        public string getGuildString(uint ac, swgohHelpApiHelper helper)
+        {
+            dynamic obj = new ExpandoObject();
+            obj.name = 1;
+            obj.roster = 1;
+            obj.stats = 1;
+            string guild = "";
+            //guild = helper.fetchGuild(ac);
+            guild = helper.fetchGetApi("GUILD", ac.ToString());
+            // guild = "{\"guild\":" + guild + "}";
+
             return guild;
 
         }
@@ -550,6 +669,25 @@ namespace SWGOH_Prereqs
             foreach (uint a in aOnlyNumbers) { neededCodes[f] = a; f++; }
             return neededCodes;
         }
+        public PlayerParse.Player getGuildMembersPremium(GuildParse.GuildMember gm, swgohHelpApiHelper helper)
+        {
+
+            string members = ""; int i = 0;
+            foreach (GuildParse.Roster r in gm.Roster)
+            {
+                if (i == 0)
+                {
+                    members += helper.fetchGetApi("PLAYER", r.AllyCode.ToString());
+                }
+                else
+                {
+                    members += "," + helper.fetchGetApi("PLAYER", r.AllyCode.ToString());
+                }
+                i++;
+            }
+            PlayerParse.Player p = JsonConvert.DeserializeObject<PlayerParse.Player>("{\"players\":[" + members + "]}");
+            return p;
+        }
         public PlayerParse.Player getInformation(DiscordMessage m, GuildParse.GuildMember gm, swgohHelpApiHelper helper, int startSize)
         {
             /*
@@ -564,6 +702,7 @@ namespace SWGOH_Prereqs
                  *Pull out the player object and get player counts 
                  */
                 PlayerParse.Player players1 = t.Item2;
+
                 int receivedCount = t.Item2.PlayerList.Length;
                 int guildMemberCount = gm.Roster.Length;
                 /*
@@ -1193,12 +1332,30 @@ namespace SWGOH_Prereqs
         public void buildHeader(String header, String sortedBy, GuildParse.GuildMember guild, DiscordEmbedBuilder embed)
         {
             String s = "";
+            double gp = 0.0;
             s = header + sortedBy + "\n";
             s += "======= Overview =======```\n";
             s += createLine("Members:", guild.Members.ToString());
             s += createLine("Total GP:", (guild.Gp / 1000000.0).ToString("0.##") + "M");
-            s += createLine("Character GP:", (buildCharGP(guild.Roster, "Char") / 1000000.0).ToString("###.##") + "M");
+            gp = buildCharGP(guild.Roster, "Char") / 1000000.0;
+            s += createLine("Character GP:", gp.ToString("###.##") + "M");
+            Console.WriteLine(gp);
             s += createLine("Fleet GP:", (buildCharGP(guild.Roster, "Fleet") / 1000000.0).ToString("###.##") + "M");
+            s += "```";
+            embed.Description = s;
+        }
+        public void buildHeader(String header, String sortedBy, GuildParse.GuildMember guild, PlayerParse.Player player, DiscordEmbedBuilder embed)
+        {
+            String s = "";
+            double gp = 0.0;
+            s = header + sortedBy + "\n";
+            s += "======= Overview =======```\n";
+            s += createLine("Members:", guild.Members.ToString());
+            s += createLine("Total GP:", (guild.Gp / 1000000.0).ToString("0.##") + "M");
+            gp = buildCharGP(player.PlayerList, "Char") / 1000000.0;
+            s += createLine("Character GP:", gp.ToString("###.##") + "M");
+            Console.WriteLine(gp);
+            s += createLine("Fleet GP:", (buildCharGP(player.PlayerList, "Fleet") / 1000000.0).ToString("###.##") + "M");
             s += "```";
             embed.Description = s;
         }

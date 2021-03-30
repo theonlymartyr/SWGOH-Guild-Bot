@@ -7,6 +7,7 @@ namespace SWGOH_Prereqs
     class Toons
     {
         public int Total { get; set; }
+        public int totalR8 { get; set; }
         public int totRel { get; set; }
         public int gp16 { get; set; }
         public int gp20 { get; set; }
@@ -18,7 +19,7 @@ namespace SWGOH_Prereqs
         public int zzzzzz { get; set; }
         public int[] gear = new int[3];
         public int[] stars = new int[3];
-        public int[] relics = new int[8];
+        public int[] relics = new int[15];
         public string name { get; set; }
         public string id { get; set; }
         public int maxZetas { get; set; }
@@ -29,6 +30,7 @@ namespace SWGOH_Prereqs
         {
             id = igname;
             Total = 0;
+            totalR8 = 0;
             totRel = 0;
             gp16 = 0;
             gp20 = 0;

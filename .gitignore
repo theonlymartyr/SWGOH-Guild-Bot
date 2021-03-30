@@ -31,3 +31,67 @@
 /.vs/SWGOH Prereqs/v15/Server/sqlite3/db.lock
 /.vs/SWGOH Prereqs/v15/.suo
 /.vs/config/applicationhost.config
+/SWGOH Prereqs/obj/Release/netcoreapp2.1
+/SWGOH Prereqs/Properties/PublishProfiles
+/SWGOH Prereqs/obj/netcoreapp2.1/win-x64/host
+/SWGOH Prereqs/obj/publish/win-x64
+/SWGOH Prereqs/SWGOH GuildBot.csproj.user
+/SWGOH Prereqs/bin/Release/netcoreapp2.1
+/SWGOH Prereqs/Logs
+/SWGOH Prereqs/Properties
+/SWGOH Prereqs/guildstats6.json
+/SWGOH Prereqs/guildstats5.json
+/SWGOH Prereqs/guildstats4.json
+/SWGOH Prereqs/guildstats3.json
+/SWGOH Prereqs/guildstats2.json
+/SWGOH Prereqs/guildstats1.json
+/SWGOH Prereqs/guildstats0.json
+/SWGOH Prereqs/guildstats.json
+/SWGOH Prereqs/test.json
+/SWGOH Prereqs/SWGOH GuildBot.xml
+/SWGOH Prereqs/swgoh bot test.txt
+/SWGOH Prereqs/spacedonkey.txt
+/SWGOH Prereqs/players.json
+/SWGOH Prereqs/database.cs
+/SWGOH Prereqs/Data/defID.txt
+*.txt
+/SWGOH Prereqs/Users.cs
+/SWGOH Prereqs/bin/Debug/netcoreapp2.0
+/SWGOH Prereqs/obj/Debug/netcoreapp2.0
+/SWGOH Prereqs/obj/publish/linux-arm
+/SWGOH Prereqs/obj/netcoreapp2.1/linux-arm/host
+*.cache
+*.json
+/.vs/SWGOH Prereqs/DesignTimeBuild/.dtbcache.v2
+/.vs/SWGOH Prereqs/v16/Server/sqlite3/db.lock
+/.vs/SWGOH Prereqs/v16/Server/sqlite3/storage.ide
+/.vs/SWGOH Prereqs/v16/Server/sqlite3/storage.ide-shm
+/.vs/SWGOH Prereqs/v16/Server/sqlite3/storage.ide-wal
+/.vs/SWGOH Prereqs/v16/.suo
+/SWGOH Prereqs/Pi version/runtimes/unix/lib/netcoreapp2.1/System.Data.SqlClient.dll
+/SWGOH Prereqs/Pi version/runtimes/unix/lib/netcoreapp2.1/System.Security.Principal.Windows.dll
+*.dll
+/SWGOH Prereqs/Pi version/System.Security.Cryptography.Native.OpenSsl.so
+/SWGOH Prereqs/Pi version/System.Security.Cryptography.Native.OpenSsl.a
+/SWGOH Prereqs/Pi version/System.Net.Security.Native.so
+/SWGOH Prereqs/Pi version/System.Net.Security.Native.a
+/SWGOH Prereqs/Pi version/System.Net.Http.Native.so
+/SWGOH Prereqs/Pi version/System.Net.Http.Native.a
+/SWGOH Prereqs/Pi version/System.Native.so
+/SWGOH Prereqs/Pi version/System.Native.a
+/SWGOH Prereqs/Pi version/System.IO.Compression.Native.so
+/SWGOH Prereqs/Pi version/System.IO.Compression.Native.a
+/SWGOH Prereqs/Pi version/System.Globalization.Native.so
+/SWGOH Prereqs/Pi version/SWGOH GuildBot.xml
+/SWGOH Prereqs/Pi version/SWGOH GuildBot.pdb
+/SWGOH Prereqs/Pi version/SWGOH GuildBot
+/SWGOH Prereqs/Pi version/libsosplugin.so
+/SWGOH Prereqs/Pi version/libsos.so
+/SWGOH Prereqs/Pi version/libmscordbi.so
+/SWGOH Prereqs/Pi version/libmscordaccore.so
+/SWGOH Prereqs/Pi version/libhostpolicy.so
+/SWGOH Prereqs/Pi version/libhostfxr.so
+/SWGOH Prereqs/Pi version/libdbgshim.so
+/SWGOH Prereqs/Pi version/libcoreclrtraceptprovider.so
+/SWGOH Prereqs/Pi version/libcoreclr.so
+/SWGOH Prereqs/Pi version/libclrjit.so
